@@ -35,9 +35,17 @@ This is a **Singapore home-based cafe marketplace** built with Next.js 14, conne
 - **Styling**: Use `cn()` utility from `/lib/utils.ts` for conditional classes
 - **Icons**: Lucide React icons are preferred
 - **Forms**: React Hook Form with Zod validation (dependencies already installed)
-- **State**: Built-in React state; no external state management
+- **State**: Built-in React state; no external state management except auth context
+- **Authentication**: Use `useAuth()` hook for user state and auth actions
 
 ## Critical Integration Points
+
+### Authentication System
+- **Auth Context**: Global user state management via `/lib/auth-context.tsx`
+- **User Types**: `customer`, `business_owner`, `admin` with role-based routing
+- **Email Verification**: Required for full feature access via Supabase Auth
+- **Auth Pages**: `/auth/get-started` → `/auth/signup` → `/auth/verify-email` → `/auth/signin`
+- **Protected Routes**: `/dashboard`, `/profile` require authentication
 
 ### Supabase Configuration
 - Client initialization in `/lib/database.ts` 
@@ -77,11 +85,15 @@ return NextResponse.json({ businesses, orders, reviews })
 - **Errors**: Console logging in API routes, check Network tab for API failures
 - **Hydration**: Avoid inline styles with template literals; use className and CSS variables instead
 - **Fonts**: Geist fonts configured via CSS variables (`--font-sans`, `--font-mono`) in Tailwind config
-- **NOTE**: Do not need to run the `npm run dev` command to start the development server; it is already running in the environment.
+- **NOTE**: Need to run `npm run dev` to start the development server and test changes locally to see whether your suggestions work as expected.
 
 ## Key Files to Reference
 - `/lib/database.ts` - All database types and helper functions
+- `/lib/auth-context.tsx` - Authentication state management
+- `/lib/auth-schemas.ts` - Form validation schemas for auth
 - `/scripts/01-create-tables.sql` - Complete database schema
 - `/app/page.tsx` - Homepage component showing UI patterns
+- `/app/dashboard/page.tsx` - Role-based dashboard example
 - `/app/api/businesses/route.ts` - API endpoint example
+- `/app/api/auth/signup/route.ts` - Authentication API example
 - `/components/ui/button.tsx` - Component pattern example

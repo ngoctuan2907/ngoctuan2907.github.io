@@ -1,3 +1,5 @@
+"use client"
+
 import { Search, MapPin, Star, Plus, TrendingUp, Users, Coffee } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -5,8 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/lib/auth-context"
 
 export default function HomePage() {
+  const { user, userProfile, signOut } = useAuth()
+
   const featuredCafes = [
     {
       id: 1,
@@ -99,15 +104,36 @@ export default function HomePage() {
               <Link href="/about" className="text-gray-600 hover:text-orange-600 transition-colors">
                 About
               </Link>
-              <Button asChild variant="outline">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="bg-orange-600 hover:bg-orange-700">
-                <Link href="/register-business">
-                  <Plus className="w-4 h-4 mr-2" />
-                  List Your Cafe
-                </Link>
-              </Button>
+              
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-600">
+                    Hi, {userProfile?.first_name}
+                  </span>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard">Dashboard</Link>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={signOut}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button asChild variant="outline">
+                    <Link href="/auth/signin">Sign In</Link>
+                  </Button>
+                  <Button asChild className="bg-orange-600 hover:bg-orange-700">
+                    <Link href="/auth/get-started">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Get Started
+                    </Link>
+                  </Button>
+                </>
+              )}
             </nav>
           </div>
         </div>
@@ -241,9 +267,9 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild className="bg-white text-orange-600 hover:bg-gray-100">
-              <Link href="/register-business">
+              <Link href={user && userProfile?.user_type === "business_owner" ? "/register-business" : "/auth/get-started"}>
                 <Plus className="w-5 h-5 mr-2" />
-                List Your Cafe
+                {user && userProfile?.user_type === "business_owner" ? "List Your Cafe" : "Get Started"}
               </Link>
             </Button>
             <Button
@@ -299,8 +325,8 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4">For Business</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <Link href="/register-business" className="hover:text-white transition-colors">
-                    List Your Cafe
+                  <Link href={user && userProfile?.user_type === "business_owner" ? "/register-business" : "/auth/get-started"} className="hover:text-white transition-colors">
+                    {user && userProfile?.user_type === "business_owner" ? "List Your Cafe" : "Get Started"}
                   </Link>
                 </li>
                 <li>

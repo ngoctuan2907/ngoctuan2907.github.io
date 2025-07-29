@@ -9,6 +9,8 @@ CREATE TABLE users (
     last_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
     user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('customer', 'business_owner', 'admin')),
+    email_verified BOOLEAN DEFAULT FALSE,
+    intended_business_name VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
