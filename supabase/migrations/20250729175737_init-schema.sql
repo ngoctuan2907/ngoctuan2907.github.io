@@ -1,24 +1,23 @@
 -- Create the main database tables for the Singapore cafe marketplace
 
--- Users table (both customers and business owners)
-CREATE TABLE users (
+-- User profiles table (extends Supabase auth.users)
+CREATE TABLE user_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
     user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('customer', 'business_owner', 'admin')),
-    email_verified BOOLEAN DEFAULT FALSE,
     intended_business_name VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id)
 );
 
 -- Business profiles table
 CREATE TABLE businesses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     business_name VARCHAR(200) NOT NULL,
     slug VARCHAR(200) UNIQUE NOT NULL,
     description TEXT NOT NULL,
@@ -101,7 +100,7 @@ CREATE TABLE business_images (
 CREATE TABLE reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'hidden', 'flagged')),
@@ -115,7 +114,7 @@ CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_number VARCHAR(20) UNIQUE NOT NULL,
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     customer_name VARCHAR(200) NOT NULL,
     customer_phone VARCHAR(20) NOT NULL,
     customer_email VARCHAR(255),
@@ -149,6 +148,7 @@ CREATE TABLE business_views (
 );
 
 -- Create indexes for better performance
+CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
 CREATE INDEX idx_businesses_status ON businesses(status);
 CREATE INDEX idx_businesses_district ON businesses(district);
 CREATE INDEX idx_businesses_created_at ON businesses(created_at);
@@ -171,7 +171,7 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers to automatically update updated_at
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_businesses_updated_at BEFORE UPDATE ON businesses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_menu_items_updated_at BEFORE UPDATE ON menu_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

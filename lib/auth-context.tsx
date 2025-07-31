@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { User as SupabaseUser } from "@supabase/supabase-js"
-import { supabase, type User } from "./database"
+import { supabase, type UserProfile } from "./database"
 
 interface AuthContextType {
   user: SupabaseUser | null
-  userProfile: User | null
+  userProfile: UserProfile | null
   loading: boolean
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
-  const [userProfile, setUserProfile] = useState<User | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refreshUser = async () => {
@@ -26,9 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         const { data: profile } = await supabase
-          .from("users")
+          .from("user_profiles")
           .select("*")
-          .eq("id", user.id)
+          .eq("user_id", user.id)
           .single()
         setUserProfile(profile)
       } else {
@@ -50,9 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         try {
           const { data: profile } = await supabase
-            .from("users")
+            .from("user_profiles")
             .select("*")
-            .eq("id", session.user.id)
+            .eq("user_id", session.user.id)
             .single()
           setUserProfile(profile)
         } catch (error) {

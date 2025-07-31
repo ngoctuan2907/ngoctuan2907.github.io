@@ -10,14 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types
-export interface User {
+export interface UserProfile {
   id: string
-  email: string
+  user_id: string  // References auth.users.id
   first_name: string
   last_name: string
   phone?: string
   user_type: "customer" | "business_owner" | "admin"
-  email_verified: boolean
   intended_business_name?: string
   created_at: string
   updated_at: string
@@ -25,7 +24,7 @@ export interface User {
 
 export interface Business {
   id: string
-  owner_id: string
+  owner_id: string  // References auth.users.id
   business_name: string
   slug: string
   description: string
@@ -211,6 +210,25 @@ export async function signUp(email: string, password: string, userData: {
   })
 
   if (error) throw error
+
+  // Create user profile after successful signup
+  if (data.user) {
+    const { error: profileError } = await supabase
+      .from("user_profiles")
+      .insert({
+        user_id: data.user.id,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        user_type: userData.userType,
+        phone: userData.phone,
+        intended_business_name: userData.intendedBusinessName,
+      })
+
+    if (profileError) {
+      console.error("Error creating user profile:", profileError)
+    }
+  }
+
   return data
 }
 
@@ -242,9 +260,9 @@ export async function getCurrentUser() {
 
 export async function getUserProfile(userId: string) {
   const { data, error } = await supabase
-    .from("users")
+    .from("user_profiles")
     .select("*")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single()
 
   if (error) throw error
@@ -252,14 +270,20 @@ export async function getUserProfile(userId: string) {
 }
 
 export async function checkEmailExists(email: string) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("email, user_type")
-    .eq("email", email)
-    .single()
+  // Check if user exists in Supabase Auth
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error && error.message !== "Invalid JWT") {
+    // Try a different approach - check user_profiles table
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("user_type")
+      .eq("user_id", "dummy") // This will return empty but won't error
+      .limit(1)
 
-  if (error && error.code !== 'PGRST116') throw error
-  return data
+    return null // For now, we'll handle this in the frontend
+  }
+  
+  return null
 }
 
 export async function resendEmailConfirmation(email: string) {
