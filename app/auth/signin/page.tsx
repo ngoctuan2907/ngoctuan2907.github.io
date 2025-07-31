@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -18,7 +18,7 @@ import { signInSchema, type SignInFormData } from "@/lib/auth-schemas"
 export default function SignInPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { refreshUser } = useAuth()
+  const { user, refreshUser } = useAuth()
   
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -31,6 +31,13 @@ export default function SignInPage() {
       password: "",
     },
   })
+
+  // Redirect to dashboard after user context is updated
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard")
+    }
+  }, [user, router])
 
   const onSubmit = async (data: SignInFormData) => {
     setIsLoading(true)
@@ -57,9 +64,8 @@ export default function SignInPage() {
         title: "Welcome back!",
         description: "You have been signed in successfully.",
       })
+      // Don't redirect here; let useEffect handle it after user context updates
 
-      // Redirect based on user type (will be handled by the auth context)
-      router.push("/dashboard")
     } catch (error: any) {
       setError(error.message || "Failed to sign in. Please try again.")
     } finally {
@@ -100,7 +106,6 @@ export default function SignInPage() {
             )}
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email */}
               <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -115,18 +120,8 @@ export default function SignInPage() {
                   </p>
                 )}
               </div>
-
-              {/* Password */}
               <div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link 
-                    href="/auth/reset-password" 
-                    className="text-sm text-orange-600 hover:text-orange-700"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -134,19 +129,13 @@ export default function SignInPage() {
                     {...form.register("password")}
                     placeholder="••••••••"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    onClick={() => setShowPassword((v) => !v)}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
                 {form.formState.errors.password && (
                   <p className="text-sm text-red-600 mt-1">
@@ -154,7 +143,6 @@ export default function SignInPage() {
                   </p>
                 )}
               </div>
-
               <Button 
                 type="submit" 
                 className="w-full bg-orange-600 hover:bg-orange-700"
@@ -170,12 +158,16 @@ export default function SignInPage() {
                 )}
               </Button>
             </form>
-
             <div className="text-center mt-6 pt-4 border-t">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
                 <Link href="/auth/get-started" className="text-orange-600 hover:text-orange-700 font-medium">
                   Get started
+                </Link>
+              </p>
+              <p className="text-sm text-gray-600 mt-2">
+                <Link href="/auth/reset-password" className="text-orange-600 hover:text-orange-700 font-medium">
+                  Forgot password?
                 </Link>
               </p>
             </div>
