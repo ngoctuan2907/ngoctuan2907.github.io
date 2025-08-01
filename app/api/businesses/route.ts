@@ -1,9 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getBusinesses } from "@/lib/database"
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
     const district = searchParams.get("district") || undefined
     const cuisine = searchParams.get("cuisine") || undefined
     const search = searchParams.get("search") || undefined

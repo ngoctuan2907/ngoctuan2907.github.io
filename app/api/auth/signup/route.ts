@@ -66,12 +66,13 @@ export async function POST(request: NextRequest) {
       needsVerification: false
     })
   } catch (error: any) {
-    console.error("❌ [VERCEL LOG] Sign up error:", {
+    // 🟢 Enhanced error logging as requested
+    console.error("❌ [VERCEL LOG] Sign up error:", JSON.stringify({
       message: error.message,
       name: error.name,
       stack: error.stack?.substring(0, 500), // Truncate stack for readability
       timestamp: new Date().toISOString()
-    })
+    }, null, 2))
     
     if (error.name === "ZodError") {
       console.error("📝 [VERCEL LOG] Validation error details:", error.errors)

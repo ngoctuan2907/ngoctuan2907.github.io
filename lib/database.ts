@@ -7,6 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("Supabase environment variables are not set. Please check your .env.local file.")
 }
 
+// 🔴 Keep this for backward compatibility, but prefer importing from supabaseClient.ts
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types
@@ -204,7 +205,8 @@ export async function signUp(email: string, password: string, userData: {
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+        // 🟢 Use production URL for email verification redirects
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://v0-singapore-cafe-websites.vercel.app'}/auth/callback`,
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,

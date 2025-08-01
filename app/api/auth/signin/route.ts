@@ -28,11 +28,12 @@ export async function POST(request: NextRequest) {
       user: result.user 
     })
   } catch (error: any) {
-    console.error("❌ [VERCEL LOG] Sign in error:", {
+    // 🟢 Enhanced error logging as requested  
+    console.error("❌ [VERCEL LOG] Sign in error:", JSON.stringify({
       message: error.message,
       name: error.name,
       timestamp: new Date().toISOString()
-    })
+    }, null, 2))
     
     if (error.name === "ZodError") {
       return NextResponse.json(

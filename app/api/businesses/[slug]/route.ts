@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getBusinessBySlug, createBusinessView } from "@/lib/database"
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
     const business = await getBusinessBySlug(params.slug)
@@ -10,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
     const userAgent = request.headers.get("user-agent")
     const viewerIp = forwardedFor?.split(",")[0] || "unknown"
 
-    await createBusinessView(business.id, viewerIp, userAgent)
+    await createBusinessView(business.id, viewerIp, userAgent || undefined)
 
     return NextResponse.json({ business })
   } catch (error) {

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/database"
+// 🟢 Use public client for auth operations
+import { supabase } from "@/lib/supabaseClient"
 
 export async function POST(request: NextRequest) {
   console.log("🔄 [VERCEL LOG] Create profile API called")
