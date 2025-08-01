@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userMetadata = user.user_metadata || {}
             const profileData = {
               user_id: user.id,
-              first_name: userMetadata.first_name || 'Unknown',
-              last_name: userMetadata.last_name || 'User',
+              first_name: userMetadata.first_name || '',
+              last_name: userMetadata.last_name || '',
               user_type: userMetadata.user_type || 'customer',
               phone: userMetadata.phone || null,
               intended_business_name: userMetadata.intended_business_name || null,

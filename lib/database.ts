@@ -240,7 +240,7 @@ export async function signUp(email: string, password: string, userData: {
         first_name: userData.firstName,
         last_name: userData.lastName,
         user_type: userData.userType,
-        phone: userData.phone || null,
+        phone: userData.phone ?? null,
         intended_business_name: userData.intendedBusinessName || null,
       }
       

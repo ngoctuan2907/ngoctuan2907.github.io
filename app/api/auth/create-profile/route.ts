@@ -5,7 +5,9 @@ export async function POST(request: NextRequest) {
   console.log("🔄 [VERCEL LOG] Create profile API called")
   
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const authHeader = request.headers.get("authorization")
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
       console.error("❌ [VERCEL LOG] Not authenticated:", authError)
@@ -35,14 +37,14 @@ export async function POST(request: NextRequest) {
     // Create profile from user metadata
     const userMetadata = user.user_metadata || {}
     const appMetadata = user.app_metadata || {}
-    
+
     const profileData = {
       user_id: user.id,
       first_name: userMetadata.first_name || appMetadata.first_name || 'Unknown',
       last_name: userMetadata.last_name || appMetadata.last_name || 'User',
       user_type: userMetadata.user_type || appMetadata.user_type || 'customer',
       phone: userMetadata.phone || appMetadata.phone || null,
-      intended_business_name: userMetadata.intended_business_name || appMetadata.intended_business_name || null,
+      intended_business_name: userMetadata.intended_business_name || appMetadata.intended_business_name || null
     }
 
     console.log("📝 [VERCEL LOG] Creating profile with data:", profileData)
