@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { resendEmailConfirmation } from "@/lib/database"
+import { supabase } from "@/lib/supabaseClient"  // 🟢 Use the explicit anon client
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    await resendEmailConfirmation(email)
+    await supabase.auth.resend({
+      type: 'signup',
+      email,
+    })
     
     return NextResponse.json({ 
       message: "Verification email sent successfully" 

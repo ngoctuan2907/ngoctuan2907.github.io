@@ -39,15 +39,23 @@ export async function POST(request: NextRequest) {
       hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       anonKeyPrefix: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20),
-      siteUrl: process.env.NEXT_PUBLIC_SITE_URL
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      effectiveRedirectUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     })
+    
+    // 🔴 CRITICAL: Force production URL for email redirects
+    const emailRedirectTo = process.env.NEXT_PUBLIC_SITE_URL 
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+      : 'https://v0-singapore-cafe-websites.vercel.app/auth/callback'  // 🟢 Hardcoded fallback
+    
+    console.log("📧 [VERCEL LOG] Email redirect URL:", emailRedirectTo)
     
     // Create user account directly with anon client
     const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+        emailRedirectTo,
         data: {
           first_name: validatedData.firstName,
           last_name: validatedData.lastName,

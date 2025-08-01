@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { resetPassword } from "@/lib/database"
+import { supabase } from "@/lib/supabaseClient"  // 🟢 Use the explicit anon client
 import { resetPasswordSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
     const validatedData = resetPasswordSchema.parse(body)
     
     // Send reset password email
-    await resetPassword(validatedData.email)
+    const { error } = await supabase.auth.resetPasswordForEmail(validatedData.email)
+    
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json({ 
       message: "Password reset email sent. Please check your inbox." 

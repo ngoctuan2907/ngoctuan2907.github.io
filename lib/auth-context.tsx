@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { User as SupabaseUser } from "@supabase/supabase-js"
-import { supabase, type UserProfile } from "./database"
+import { supabase } from "./supabaseClient"  // 🟢 Use the explicit anon client
+import { type UserProfile } from "./database"
 
 interface AuthContextType {
   user: SupabaseUser | null
