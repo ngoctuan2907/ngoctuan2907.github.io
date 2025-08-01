@@ -195,7 +195,11 @@ export async function signUp(email: string, password: string, userData: {
   phone?: string
   intendedBusinessName?: string
 }) {
+  console.log("🔄 [VERCEL LOG] signUp function called for:", email)
+  
   try {
+    console.log("📞 [VERCEL LOG] Calling supabase.auth.signUp...")
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -212,13 +216,25 @@ export async function signUp(email: string, password: string, userData: {
     })
 
     if (error) {
-      console.error("Supabase signup error:", error)
+      console.error("❌ [VERCEL LOG] Supabase signup error:", {
+        message: error.message,
+        status: error.status,
+        name: error.name
+      })
       throw error
     }
 
+    console.log("✅ [VERCEL LOG] Supabase auth signup successful:", {
+      userId: data.user?.id,
+      userEmail: data.user?.email,
+      emailConfirmed: data.user?.email_confirmed_at,
+      sessionExists: !!data.session
+    })
+
     // Create user profile after successful signup
     if (data.user) {
-      console.log("Creating user profile for:", data.user.id)
+      console.log("👤 [VERCEL LOG] Creating user profile for user:", data.user.id)
+      
       const { error: profileError } = await supabase
         .from("user_profiles")
         .insert({
@@ -231,16 +247,27 @@ export async function signUp(email: string, password: string, userData: {
         })
 
       if (profileError) {
-        console.error("Error creating user profile:", profileError)
+        console.error("❌ [VERCEL LOG] Error creating user profile:", {
+          message: profileError.message,
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint
+        })
         // Don't throw here - user is created, profile creation can be retried
       } else {
-        console.log("User profile created successfully")
+        console.log("✅ [VERCEL LOG] User profile created successfully")
       }
+    } else {
+      console.warn("⚠️  [VERCEL LOG] No user returned from Supabase signup")
     }
 
     return data
   } catch (error) {
-    console.error("SignUp function error:", error)
+    console.error("💥 [VERCEL LOG] SignUp function error:", {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'Unknown',
+      email: email // Include email for debugging
+    })
     throw error
   }
 }

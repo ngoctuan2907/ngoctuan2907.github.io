@@ -3,21 +3,36 @@ import { signIn } from "@/lib/database"
 import { signInSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
+  console.log("🔐 [VERCEL LOG] Signin API called at:", new Date().toISOString())
+  
   try {
     const body = await request.json()
+    console.log("📥 [VERCEL LOG] Signin request for email:", body.email)
     
     // Validate input
     const validatedData = signInSchema.parse(body)
+    console.log("✅ [VERCEL LOG] Signin data validation successful")
     
     // Sign in user
+    console.log("🔄 [VERCEL LOG] Calling signIn function...")
     const result = await signIn(validatedData.email, validatedData.password)
+
+    console.log("✅ [VERCEL LOG] SignIn successful:", {
+      userId: result.user?.id,
+      email: result.user?.email,
+      emailConfirmed: result.user?.email_confirmed_at
+    })
 
     return NextResponse.json({ 
       message: "Signed in successfully",
       user: result.user 
     })
   } catch (error: any) {
-    console.error("Sign in error:", error)
+    console.error("❌ [VERCEL LOG] Sign in error:", {
+      message: error.message,
+      name: error.name,
+      timestamp: new Date().toISOString()
+    })
     
     if (error.name === "ZodError") {
       return NextResponse.json(
@@ -28,6 +43,7 @@ export async function POST(request: NextRequest) {
     
     // Handle specific auth errors
     if (error.message?.includes("Invalid login credentials")) {
+      console.log("⚠️  [VERCEL LOG] Invalid credentials - possible unverified email")
       return NextResponse.json(
         { error: "Invalid email or password. If you just signed up, please verify your email first." },
         { status: 401 }
@@ -35,6 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (error.message?.includes("Email not confirmed")) {
+      console.log("📧 [VERCEL LOG] Email not confirmed")
       return NextResponse.json(
         { error: "Please check your email and click the verification link before signing in." },
         { status: 401 }
@@ -48,6 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    console.error("💥 [VERCEL LOG] Unhandled signin error - returning 500")
     return NextResponse.json(
       { error: error.message || "Failed to sign in" },
       { status: 500 }
