@@ -25,12 +25,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user)
       
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from("user_profiles")
           .select("*")
           .eq("user_id", user.id)
           .single()
-        setUserProfile(profile)
+          
+        if (error) {
+          console.error("Error fetching user profile:", error)
+          
+          // If profile doesn't exist, try to create it from user metadata
+          if (error.code === 'PGRST116') { // No rows returned
+            console.log("🔄 [AUTH CONTEXT] Profile not found, attempting to create from metadata...")
+            
+            const userMetadata = user.user_metadata || {}
+            const profileData = {
+              user_id: user.id,
+              first_name: userMetadata.first_name || 'Unknown',
+              last_name: userMetadata.last_name || 'User',
+              user_type: userMetadata.user_type || 'customer',
+              phone: userMetadata.phone || null,
+              intended_business_name: userMetadata.intended_business_name || null,
+            }
+            
+            const { data: newProfile, error: createError } = await supabase
+              .from("user_profiles")
+              .insert(profileData)
+              .select()
+              .single()
+              
+            if (createError) {
+              console.error("❌ [AUTH CONTEXT] Failed to create profile:", createError)
+              setUserProfile(null)
+            } else {
+              console.log("✅ [AUTH CONTEXT] Profile created successfully:", newProfile)
+              setUserProfile(newProfile)
+            }
+          } else {
+            setUserProfile(null)
+          }
+        } else {
+          setUserProfile(profile)
+        }
       } else {
         setUserProfile(null)
       }

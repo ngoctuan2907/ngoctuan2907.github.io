@@ -3,7 +3,7 @@
 /copilot-*.md
 /fixing-*.md
 /vercel-deployment-guide.md
-
+apply-schema.sh
 # dependencies
 /node_modules
 

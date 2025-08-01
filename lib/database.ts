@@ -235,27 +235,33 @@ export async function signUp(email: string, password: string, userData: {
     if (data.user) {
       console.log("👤 [VERCEL LOG] Creating user profile for user:", data.user.id)
       
-      const { error: profileError } = await supabase
+      const profileData = {
+        user_id: data.user.id,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        user_type: userData.userType,
+        phone: userData.phone || null,
+        intended_business_name: userData.intendedBusinessName || null,
+      }
+      
+      console.log("📝 [VERCEL LOG] Profile data to insert:", profileData)
+      
+      const { data: insertedProfile, error: profileError } = await supabase
         .from("user_profiles")
-        .insert({
-          user_id: data.user.id,
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          user_type: userData.userType,
-          phone: userData.phone,
-          intended_business_name: userData.intendedBusinessName,
-        })
+        .insert(profileData)
+        .select()
 
       if (profileError) {
         console.error("❌ [VERCEL LOG] Error creating user profile:", {
-          message: profileError.message,
-          code: profileError.code,
-          details: profileError.details,
-          hint: profileError.hint
+          message: profileError.message || 'No message',
+          code: profileError.code || 'No code',
+          details: profileError.details || 'No details',
+          hint: profileError.hint || 'No hint',
+          originalError: JSON.stringify(profileError, null, 2)
         })
         // Don't throw here - user is created, profile creation can be retried
       } else {
-        console.log("✅ [VERCEL LOG] User profile created successfully")
+        console.log("✅ [VERCEL LOG] User profile created successfully:", insertedProfile)
       }
     } else {
       console.warn("⚠️  [VERCEL LOG] No user returned from Supabase signup")
