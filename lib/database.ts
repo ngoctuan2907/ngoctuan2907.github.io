@@ -195,51 +195,84 @@ export async function signUp(email: string, password: string, userData: {
   phone?: string
   intendedBusinessName?: string
 }) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        user_type: userData.userType,
-        phone: userData.phone,
-        intended_business_name: userData.intendedBusinessName,
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+        data: {
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          user_type: userData.userType,
+          phone: userData.phone,
+          intended_business_name: userData.intendedBusinessName,
+        }
+      }
+    })
+
+    if (error) {
+      console.error("Supabase signup error:", error)
+      throw error
+    }
+
+    // Create user profile after successful signup
+    if (data.user) {
+      console.log("Creating user profile for:", data.user.id)
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .insert({
+          user_id: data.user.id,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          user_type: userData.userType,
+          phone: userData.phone,
+          intended_business_name: userData.intendedBusinessName,
+        })
+
+      if (profileError) {
+        console.error("Error creating user profile:", profileError)
+        // Don't throw here - user is created, profile creation can be retried
+      } else {
+        console.log("User profile created successfully")
       }
     }
-  })
 
-  if (error) throw error
-
-  // Create user profile after successful signup
-  if (data.user) {
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .insert({
-        user_id: data.user.id,
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        user_type: userData.userType,
-        phone: userData.phone,
-        intended_business_name: userData.intendedBusinessName,
-      })
-
-    if (profileError) {
-      console.error("Error creating user profile:", profileError)
-    }
+    return data
+  } catch (error) {
+    console.error("SignUp function error:", error)
+    throw error
   }
-
-  return data
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-  if (error) throw error
-  return data
+    if (error) {
+      console.error("Supabase signin error:", error)
+      
+      // Handle specific error cases
+      if (error.message === "Invalid login credentials") {
+        // Check if it's an unverified email issue
+        throw new Error("Invalid email or password. If you just signed up, please check your email and verify your account first.")
+      }
+      
+      if (error.message === "Email not confirmed") {
+        throw new Error("Please check your email and click the verification link before signing in.")
+      }
+      
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error("SignIn function error:", error)
+    throw error
+  }
 }
 
 export async function signOut() {
@@ -269,21 +302,29 @@ export async function getUserProfile(userId: string) {
   return data
 }
 
-export async function checkEmailExists(email: string) {
-  // Check if user exists in Supabase Auth
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error && error.message !== "Invalid JWT") {
-    // Try a different approach - check user_profiles table
-    const { data } = await supabase
+export async function checkEmailExists(email: string): Promise<UserProfile | null> {
+  try {
+    // Use Supabase Admin API to check if user exists by email
+    // For now, we'll check the user_profiles table directly
+    // This requires RLS to be properly configured
+    const { data, error } = await supabase
       .from("user_profiles")
-      .select("user_type")
-      .eq("user_id", "dummy") // This will return empty but won't error
+      .select("*")
       .limit(1)
+      .maybeSingle()
 
-    return null // For now, we'll handle this in the frontend
+    if (error) {
+      console.error("Error checking email existence:", error)
+      return null
+    }
+    
+    // For production, we should implement a proper email check
+    // For now, return null to allow signup process
+    return null
+  } catch (error) {
+    console.error("Error in checkEmailExists:", error)
+    return null
   }
-  
-  return null
 }
 
 export async function resendEmailConfirmation(email: string) {

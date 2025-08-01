@@ -26,9 +26,24 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (error.message === "Invalid login credentials") {
+    // Handle specific auth errors
+    if (error.message?.includes("Invalid login credentials")) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid email or password. If you just signed up, please verify your email first." },
+        { status: 401 }
+      )
+    }
+
+    if (error.message?.includes("Email not confirmed")) {
+      return NextResponse.json(
+        { error: "Please check your email and click the verification link before signing in." },
+        { status: 401 }
+      )
+    }
+
+    if (error.message?.includes("verify your email")) {
+      return NextResponse.json(
+        { error: error.message },
         { status: 401 }
       )
     }

@@ -9,17 +9,17 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = signUpSchema.parse(body)
     
-    // Check if email already exists
-    const existingUser = await checkEmailExists(validatedData.email)
-    if (existingUser) {
-      return NextResponse.json(
-        { 
-          error: "An account with this email already exists",
-          userType: existingUser.user_type 
-        }, 
-        { status: 409 }
-      )
-    }
+    // Check if email already exists (temporarily disabled to avoid conflicts)
+    // const existingUser = await checkEmailExists(validatedData.email)
+    // if (existingUser) {
+    //   return NextResponse.json(
+    //     { 
+    //       error: "An account with this email already exists",
+    //       userType: existingUser.user_type 
+    //     }, 
+    //     { status: 409 }
+    //   )
+    // }
 
     // Create user account
     const result = await signUp(validatedData.email, validatedData.password, {
@@ -30,9 +30,19 @@ export async function POST(request: NextRequest) {
       intendedBusinessName: validatedData.intendedBusinessName,
     })
 
+    // Check if user needs email verification
+    if (result.user && !result.user.email_confirmed_at) {
+      return NextResponse.json({ 
+        message: "Account created successfully! Please check your email and click the verification link before signing in.",
+        user: result.user,
+        needsVerification: true
+      })
+    }
+
     return NextResponse.json({ 
-      message: "Account created successfully. Please check your email to verify your account.",
-      user: result.user 
+      message: "Account created successfully. You can now sign in.",
+      user: result.user,
+      needsVerification: false
     })
   } catch (error: any) {
     console.error("Sign up error:", error)
@@ -41,6 +51,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Invalid input data", details: error.errors },
         { status: 400 }
+      )
+    }
+
+    // Handle Supabase auth errors
+    if (error.message?.includes("already registered")) {
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in instead." },
+        { status: 409 }
       )
     }
     
