@@ -198,6 +198,14 @@ export async function signUp(email: string, password: string, userData: {
 }) {
   console.log("🔄 [VERCEL LOG] signUp function called for:", email)
   
+  // 🚨 DEBUG: Log which keys are being used
+  console.log("🔍 [VERCEL LOG] Environment check:", {
+    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    anonKeyPrefix: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20),
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL
+  })
+  
   try {
     console.log("📞 [VERCEL LOG] Calling supabase.auth.signUp...")
     
@@ -206,7 +214,7 @@ export async function signUp(email: string, password: string, userData: {
       password,
       options: {
         // 🟢 Use production URL for email verification redirects
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://v0-singapore-cafe-websites.vercel.app'}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,

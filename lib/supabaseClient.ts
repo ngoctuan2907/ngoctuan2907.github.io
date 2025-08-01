@@ -5,7 +5,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase environment variables are not set. Please check your .env.local file.")
+  console.warn("Supabase environment variables NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY are not set. Please check your .env.local file.")
+}
+
+if (!supabaseServiceKey) {
+  console.warn("Supabase environment variable SUPABASE_SERVICE_ROLE_KEY is not set. Please check your .env.local file.")
 }
 
 // 🟢 Public client - ALWAYS use for auth operations (signUp, signIn)

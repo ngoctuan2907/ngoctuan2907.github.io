@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { signIn } from "@/lib/database"
+import { supabase } from "@/lib/supabaseClient"  // 🟢 Use the explicit anon client
 import { signInSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
@@ -13,9 +13,30 @@ export async function POST(request: NextRequest) {
     const validatedData = signInSchema.parse(body)
     console.log("✅ [VERCEL LOG] Signin data validation successful")
     
-    // Sign in user
-    console.log("🔄 [VERCEL LOG] Calling signIn function...")
-    const result = await signIn(validatedData.email, validatedData.password)
+    // Sign in user directly with anon client
+    console.log("🔄 [VERCEL LOG] Calling supabase.auth.signInWithPassword...")
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: validatedData.email,
+      password: validatedData.password,
+    })
+
+    if (error) {
+      console.error("❌ [VERCEL LOG] Supabase signin error:", error)
+      
+      // Handle specific error cases
+      if (error.message === "Invalid login credentials") {
+        // Check if it's an unverified email issue
+        throw new Error("Invalid email or password. If you just signed up, please check your email and verify your account first.")
+      }
+      
+      if (error.message === "Email not confirmed") {
+        throw new Error("Please check your email and click the verification link before signing in.")
+      }
+      
+      throw error
+    }
+
+    const result = data
 
     console.log("✅ [VERCEL LOG] SignIn successful:", {
       userId: result.user?.id,
