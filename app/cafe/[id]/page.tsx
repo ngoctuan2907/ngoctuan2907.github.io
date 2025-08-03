@@ -1,12 +1,30 @@
-import { ArrowLeft, MapPin, Clock, Phone, Mail, Instagram, Star, Heart, Share2 } from "lucide-react"
+"use client"
+
+import { ArrowLeft, MapPin, Clock, Phone, Mail, Instagram, Star, Heart, Share2, MessageSquare, Map, Navigation } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/lib/auth-context"
+import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function CafeProfilePage({ params }: { params: { id: string } }) {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [isSaved, setIsSaved] = useState(false)
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false)
+  const [reviewText, setReviewText] = useState("")
+  const [reviewRating, setReviewRating] = useState(5)
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+  const [nearestLocations, setNearestLocations] = useState<any[]>([])
+
   // Mock data - in real app, this would be fetched based on params.id
   const cafe = {
     id: 1,
@@ -63,6 +81,10 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
       instagram: "@ahmas_kitchen_sg",
       whatsapp: "+65 9123 4567",
     },
+    coordinates: {
+      lat: 1.3521,
+      lng: 103.8198,
+    },
     reviews: [
       {
         name: "Sarah T.",
@@ -88,6 +110,151 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
     ],
   }
 
+  // Interactive functions
+  const handleSave = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to save cafes to your favorites",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsSaved(!isSaved)
+      toast({
+        title: isSaved ? "Removed from favorites" : "Added to favorites",
+        description: isSaved ? `${cafe.name} removed from your saved cafes` : `${cafe.name} saved to your favorites`,
+      })
+    } catch (error) {
+      console.error("Error saving cafe:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save cafe. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `${cafe.name} - ${cafe.specialty}`,
+      text: `Check out ${cafe.name} in ${cafe.location}! ${cafe.description.slice(0, 100)}...`,
+      url: window.location.href,
+    }
+
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(window.location.href)
+        toast({
+          title: "Link copied!",
+          description: "Cafe link copied to clipboard",
+        })
+      }
+    } catch (error) {
+      console.error("Error sharing:", error)
+      toast({
+        title: "Error",
+        description: "Failed to share. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCallToOrder = () => {
+    const phoneNumber = cafe.contact.phone.replace(/\s/g, "")
+    window.open(`tel:${phoneNumber}`)
+    toast({
+      title: "Calling cafe",
+      description: `Dialing ${cafe.contact.phone}`,
+    })
+  }
+
+  const handleInstagram = () => {
+    const instagramHandle = cafe.contact.instagram.replace("@", "")
+    window.open(`https://instagram.com/${instagramHandle}`, "_blank")
+    toast({
+      title: "Opening Instagram",
+      description: `Following ${cafe.contact.instagram}`,
+    })
+  }
+
+  const handleOpenInMaps = () => {
+    const encodedAddress = encodeURIComponent(cafe.fullAddress)
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`
+    window.open(mapsUrl, "_blank")
+    toast({
+      title: "Opening in Maps",
+      description: "Directions to " + cafe.name,
+    })
+  }
+
+  const handleWriteReview = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to write a review",
+        variant: "destructive",
+      })
+      return
+    }
+    setIsReviewDialogOpen(true)
+  }
+
+  const submitReview = async () => {
+    if (!reviewText.trim()) {
+      toast({
+        title: "Review required",
+        description: "Please write a review before submitting",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmittingReview(true)
+    try {
+      // Here you would save the review to your database
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      
+      toast({
+        title: "Review submitted!",
+        description: "Thank you for your feedback",
+      })
+      setIsReviewDialogOpen(false)
+      setReviewText("")
+      setReviewRating(5)
+    } catch (error) {
+      console.error("Error submitting review:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit review. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingReview(false)
+    }
+  }
+
+  // Get current day for showing today's hours
+  const getCurrentDay = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return days[new Date().getDay()]
+  }
+
+  const todayHours = cafe.hours[getCurrentDay() as keyof typeof cafe.hours]
+
+  useEffect(() => {
+    // Mock nearby locations - in real app, this would be a geolocation-based API call
+    setNearestLocations([
+      { name: "Toa Payoh Central", distance: "0.5 km", walkTime: "6 min" },
+      { name: "Toa Payoh MRT Station", distance: "0.8 km", walkTime: "10 min" },
+      { name: "HDB Hub", distance: "1.2 km", walkTime: "15 min" },
+    ])
+  }, [])
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -99,11 +266,11 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
               <span>Back to Browse</span>
             </Link>
             <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="sm">
-                <Heart className="w-4 h-4 mr-2" />
-                Save
+              <Button variant="ghost" size="sm" onClick={handleSave}>
+                <Heart className={`w-4 h-4 mr-2 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                {isSaved ? 'Saved' : 'Save'}
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={handleShare}>
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
@@ -186,18 +353,18 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                 <div className="flex items-center text-gray-600">
                   <Clock className="w-5 h-5 mr-3 text-orange-600" />
                   <div>
-                    <p className="font-medium">Open today: {cafe.hours.Monday}</p>
+                    <p className="font-medium">Open today: {todayHours}</p>
                     <p className="text-sm text-gray-500">See all hours below</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button className="bg-orange-600 hover:bg-orange-700 flex-1">
+                <Button className="bg-orange-600 hover:bg-orange-700 flex-1" onClick={handleCallToOrder}>
                   <Phone className="w-4 h-4 mr-2" />
                   Call to Order
                 </Button>
-                <Button variant="outline" className="flex-1 bg-transparent">
+                <Button variant="outline" className="flex-1 bg-transparent" onClick={handleInstagram}>
                   <Instagram className="w-4 h-4 mr-2" />
                   Follow on Instagram
                 </Button>
@@ -237,7 +404,8 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">Reviews</h2>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleWriteReview}>
+                      <MessageSquare className="w-4 h-4 mr-2" />
                       Write a Review
                     </Button>
                   </div>
@@ -313,15 +481,85 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                     <span className="text-gray-500">Map placeholder</span>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">{cafe.fullAddress}</p>
-                  <Button variant="outline" size="sm" className="w-full bg-transparent">
+                  <Button variant="outline" size="sm" className="w-full bg-transparent mb-2" onClick={handleOpenInMaps}>
+                    <Map className="w-4 h-4 mr-2" />
                     Open in Maps
                   </Button>
+                  
+                  {/* Nearest Locations */}
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-900 mb-2 text-sm">Nearest Landmarks</h4>
+                    <div className="space-y-1">
+                      {nearestLocations.map((location, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center">
+                            <Navigation className="w-3 h-3 mr-1 text-gray-400" />
+                            <span className="text-gray-600">{location.name}</span>
+                          </div>
+                          <div className="text-gray-500">
+                            <span>{location.distance}</span>
+                            <span className="ml-1">({location.walkTime} walk)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Review Dialog */}
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Write a Review for {cafe.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rating" className="text-sm font-medium">Rating</Label>
+              <div className="flex items-center space-x-1 mt-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-6 h-6 cursor-pointer transition-colors ${
+                      star <= reviewRating 
+                        ? 'fill-yellow-400 text-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-200'
+                    }`}
+                    onClick={() => setReviewRating(star)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="review" className="text-sm font-medium">Your Review</Label>
+              <Textarea
+                id="review"
+                placeholder="Share your experience with this cafe..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="mt-1"
+                rows={4}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={submitReview} 
+                disabled={isSubmittingReview}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {isSubmittingReview ? "Submitting..." : "Submit Review"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
