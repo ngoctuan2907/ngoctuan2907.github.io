@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { User as SupabaseUser } from "@supabase/supabase-js"
 import { supabase } from "./supabaseClient"  // 🟢 Use the explicit anon client
 import { type UserProfile } from "./database"
@@ -16,6 +17,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -115,8 +117,8 @@ useEffect(() => {
         console.log("✅ [AUTH] Signed out successfully")
         setUser(null)
         setUserProfile(null)
-        // Force redirect to home page
-        window.location.href = "/"
+        // Force redirect to home page using Next.js router
+        router.push("/")
       }
     } catch (error) {
       console.error("❌ [AUTH] Sign out failed:", error)
