@@ -1,0 +1,157 @@
+# Supabase Configuration File
+# Generated: 2025-08-03
+# Purpose: Address Supabase Security Advisor warnings
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost:54321"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+[storage.image_transformation]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "https://v0-singapore-cafe-websites.vercel.app"
+additional_redirect_urls = ["https://v0-singapore-cafe-websites.vercel.app"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+security_update_password_require_reauthentication = true
+security_captcha_enabled = false
+
+# 🔧 Security Fixes for Supabase Security Advisor Warnings
+
+# Fix: Auth OTP Long Expiry - Set to recommended 10 minutes (600 seconds)
+[auth.sms]
+autoconfirm = false
+otp_exp = 600
+otp_length = 6
+provider = "twilio"
+template = "Your code is {{ .Code }}"
+
+[auth.email]
+autoconfirm = false
+# Fix: OTP expiry set to 10 minutes (600 seconds) instead of default 1 hour
+otp_exp = 600
+otp_length = 6
+
+# Secure email templates
+[auth.email.template.invite]
+subject = "You have been invited"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your signup"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Your magic link"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your email change"
+content_path = "./supabase/templates/email_change.html"
+
+# Fix: Enable leaked password protection
+[auth.password]
+# Enable leaked password detection (fixes Security Advisor warning)
+enable_signup = true
+min_length = 8
+# Enable leaked password protection for production
+leaked_password_protection = true
+
+# Social auth providers (disabled by default for security)
+[auth.external.apple]
+enabled = false
+
+[auth.external.azure]
+enabled = false
+
+[auth.external.bitbucket]
+enabled = false
+
+[auth.external.discord]
+enabled = false
+
+[auth.external.facebook]
+enabled = false
+
+[auth.external.github]
+enabled = false
+
+[auth.external.gitlab]
+enabled = false
+
+[auth.external.google]
+enabled = false
+
+[auth.external.keycloak]
+enabled = false
+
+[auth.external.linkedin]
+enabled = false
+
+[auth.external.notion]
+enabled = false
+
+[auth.external.spotify]
+enabled = false
+
+[auth.external.slack]
+enabled = false
+
+[auth.external.twitch]
+enabled = false
+
+[auth.external.twitter]
+enabled = false
+
+[auth.external.workos]
+enabled = false
+
+[auth.external.zoom]
+enabled = false
+
+# Security settings
+[auth.security]
+# Enable additional security features
+captcha_enabled = false
+captcha_provider = "hcaptcha"
+update_password_require_reauthentication = true
+
+# Edge functions
+[edge_runtime]
+enabled = true
+policy = "per_function"
+
+[functions]
+verify_jwt = false
+
+# Analytics
+[analytics]
+enabled = false

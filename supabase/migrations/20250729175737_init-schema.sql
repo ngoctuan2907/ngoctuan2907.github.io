@@ -1,3 +1,27 @@
+-- Cleanup old triggers and functions
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+DROP TRIGGER IF EXISTS update_businesses_updated_at ON businesses;
+DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
+
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+-- Drop all existing tables in reverse dependency order
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS business_images CASCADE;
+DROP TABLE IF EXISTS menu_items CASCADE;
+DROP TABLE IF EXISTS menu_categories CASCADE;
+DROP TABLE IF EXISTS business_hours CASCADE;
+DROP TABLE IF EXISTS business_cuisines CASCADE;
+DROP TABLE IF EXISTS cuisine_types CASCADE;
+DROP TABLE IF EXISTS business_views CASCADE;
+DROP TABLE IF EXISTS businesses CASCADE;
+DROP TABLE IF EXISTS user_profiles CASCADE;
+
+
 -- Create the main database tables for the Singapore cafe marketplace
 
 -- User profiles table (extends Supabase auth.users)
