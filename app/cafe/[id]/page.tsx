@@ -16,7 +16,7 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
     location: "Toa Payoh",
     fullAddress: "Blk 123 Toa Payoh Lorong 1, #01-456, Singapore 310123",
     rating: 4.8,
-    reviews: 124,
+    reviewCount: 124,
     priceRange: "$$",
     isOpen: true,
     description:
@@ -156,7 +156,7 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                     <div className="flex items-center">
                       <Star className="w-4 h-4 mr-1 fill-yellow-400 text-yellow-400" />
                       <span className="font-semibold">{cafe.rating}</span>
-                      <span className="ml-1">({cafe.reviews.length} reviews)</span>
+                      <span className="ml-1">({cafe.reviewCount} reviews)</span>
                     </div>
                     <span>•</span>
                     <span>{cafe.priceRange}</span>

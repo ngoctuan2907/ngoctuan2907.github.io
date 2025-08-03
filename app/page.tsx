@@ -1,16 +1,24 @@
-"use client"
+"use client";
 
-import { Search, MapPin, Star, Plus, TrendingUp, Users, Coffee } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/lib/auth-context"
+import {
+  Search,
+  MapPin,
+  Star,
+  Plus,
+  TrendingUp,
+  Users,
+  Coffee,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/auth-context";
 
 export default function HomePage() {
-  const { user, userProfile, signOut } = useAuth()
+  const { user, userProfile, signOut } = useAuth();
 
   const featuredCafes = [
     {
@@ -61,7 +69,7 @@ export default function HomePage() {
       priceRange: "$$",
       isOpen: true,
     },
-  ]
+  ];
 
   const categories = [
     { name: "Local", icon: "🇸🇬", count: 45 },
@@ -70,13 +78,13 @@ export default function HomePage() {
     { name: "Desserts", icon: "🧁", count: 19 },
     { name: "Coffee", icon: "☕", count: 41 },
     { name: "Healthy", icon: "🥗", count: 23 },
-  ]
+  ];
 
   const stats = [
     { label: "Home Cafes", value: "200+", icon: Coffee },
     { label: "Happy Customers", value: "15K+", icon: Users },
     { label: "Orders Completed", value: "50K+", icon: TrendingUp },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -89,22 +97,35 @@ export default function HomePage() {
                 <span className="text-white font-bold text-lg">SG</span>
               </div>
               <div>
-                <span className="font-bold text-xl text-gray-900">SG Home Eats</span>
-                <p className="text-xs text-gray-500">Discover Local Home Cafes</p>
+                <span className="font-bold text-xl text-gray-900">
+                  SG Home Eats
+                </span>
+                <p className="text-xs text-gray-500">
+                  Discover Local Home Cafes
+                </p>
               </div>
             </Link>
 
             <nav className="hidden md:flex items-center space-x-6">
-              <Link href="/browse" className="text-gray-600 hover:text-orange-600 transition-colors">
+              <Link
+                href="/browse"
+                className="text-gray-600 hover:text-orange-600 transition-colors"
+              >
                 Browse
               </Link>
-              <Link href="/categories" className="text-gray-600 hover:text-orange-600 transition-colors">
+              <Link
+                href="/categories"
+                className="text-gray-600 hover:text-orange-600 transition-colors"
+              >
                 Categories
               </Link>
-              <Link href="/about" className="text-gray-600 hover:text-orange-600 transition-colors">
+              <Link
+                href="/about"
+                className="text-gray-600 hover:text-orange-600 transition-colors"
+              >
                 About
               </Link>
-              
+
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-600">
@@ -113,8 +134,8 @@ export default function HomePage() {
                   <Button asChild variant="outline">
                     <Link href="/dashboard">Dashboard</Link>
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={signOut}
                     className="text-gray-600 hover:text-gray-900"
                   >
@@ -148,7 +169,8 @@ export default function HomePage() {
               <span className="text-orange-600 block">Home-Based Cafes</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Support local entrepreneurs and taste authentic flavors from passionate home chefs across Singapore
+              Support local entrepreneurs and taste authentic flavors from
+              passionate home chefs across Singapore
             </p>
 
             {/* Search Bar */}
@@ -156,9 +178,15 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input placeholder="Search for cuisine, location, or cafe name..." className="pl-10 h-12 text-lg" />
+                  <Input
+                    placeholder="Search for cuisine, location, or cafe name..."
+                    className="pl-10 h-12 text-lg"
+                  />
                 </div>
-                <Button size="lg" className="bg-orange-600 hover:bg-orange-700 h-12 px-8">
+                <Button
+                  size="lg"
+                  className="bg-orange-600 hover:bg-orange-700 h-12 px-8"
+                >
                   Search
                 </Button>
               </div>
@@ -171,7 +199,9 @@ export default function HomePage() {
                   <div className="flex justify-center mb-2">
                     <stat.icon className="w-8 h-8 text-orange-600" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {stat.value}
+                  </div>
                   <div className="text-sm text-gray-600">{stat.label}</div>
                 </div>
               ))}
@@ -183,15 +213,26 @@ export default function HomePage() {
       {/* Categories */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Browse by Category</h2>
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+            Browse by Category
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-4xl mx-auto">
             {categories.map((category, index) => (
-              <Link key={index} href={`/category/${category.name.toLowerCase()}`}>
-                <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">{category.icon}</div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{category.name}</h3>
-                    <p className="text-sm text-gray-500">{category.count} cafes</p>
+              <Link
+                key={index}
+                href={`/category/${category.name.toLowerCase()}`}
+              >
+                <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group h-full">
+                  <CardContent className="p-6 text-center h-full flex flex-col justify-center">
+                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                      {category.icon}
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-1 min-h-[2.5rem] flex items-center justify-center">
+                      {category.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {category.count} cafes
+                    </p>
                   </CardContent>
                 </Card>
               </Link>
@@ -204,7 +245,9 @@ export default function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Featured Home Cafes</h2>
+            <h2 className="text-3xl font-bold text-gray-900">
+              Featured Home Cafes
+            </h2>
             <Button variant="outline" asChild>
               <Link href="/browse">View All</Link>
             </Button>
@@ -223,7 +266,10 @@ export default function HomePage() {
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute top-3 right-3">
-                      <Badge variant={cafe.isOpen ? "default" : "secondary"} className="bg-white/90 text-gray-900">
+                      <Badge
+                        variant={cafe.isOpen ? "default" : "secondary"}
+                        className="bg-white/90 text-gray-900"
+                      >
                         {cafe.isOpen ? "Open" : "Closed"}
                       </Badge>
                     </div>
@@ -233,9 +279,13 @@ export default function HomePage() {
                       <h3 className="font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
                         {cafe.name}
                       </h3>
-                      <span className="text-sm text-gray-500">{cafe.priceRange}</span>
+                      <span className="text-sm text-gray-500">
+                        {cafe.priceRange}
+                      </span>
                     </div>
-                    <p className="text-sm text-orange-600 mb-2">{cafe.specialty}</p>
+                    <p className="text-sm text-orange-600 mb-2">
+                      {cafe.specialty}
+                    </p>
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <div className="flex items-center">
                         <MapPin className="w-4 h-4 mr-1" />
@@ -260,16 +310,32 @@ export default function HomePage() {
       {/* Call to Action for Business Owners */}
       <section className="py-16 bg-gradient-to-r from-orange-600 to-red-600 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Share Your Culinary Passion?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            Ready to Share Your Culinary Passion?
+          </h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Join Singapore's growing community of home-based food entrepreneurs. Create your profile in minutes and
-            start connecting with food lovers in your neighborhood.
+            Join Singapore's growing community of home-based food entrepreneurs.
+            Create your profile in minutes and start connecting with food lovers
+            in your neighborhood.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" asChild className="bg-white text-orange-600 hover:bg-gray-100">
-              <Link href={user && userProfile?.user_type === "business_owner" ? "/register-business" : "/auth/get-started"}>
+            <Button
+              size="lg"
+              variant="secondary"
+              asChild
+              className="bg-white text-orange-600 hover:bg-gray-100"
+            >
+              <Link
+                href={
+                  user && userProfile?.user_type === "business_owner"
+                    ? "/register-business"
+                    : "/auth/get-started"
+                }
+              >
                 <Plus className="w-5 h-5 mr-2" />
-                {user && userProfile?.user_type === "business_owner" ? "List Your Cafe" : "Get Started"}
+                {user && userProfile?.user_type === "business_owner"
+                  ? "List Your Cafe"
+                  : "Get Started"}
               </Link>
             </Button>
             <Button
@@ -296,7 +362,8 @@ export default function HomePage() {
                 <span className="font-bold text-lg">SG Home Eats</span>
               </div>
               <p className="text-gray-400 text-sm">
-                Connecting food lovers with passionate home chefs across Singapore.
+                Connecting food lovers with passionate home chefs across
+                Singapore.
               </p>
             </div>
 
@@ -304,17 +371,26 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4">For Customers</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <Link href="/browse" className="hover:text-white transition-colors">
+                  <Link
+                    href="/browse"
+                    className="hover:text-white transition-colors"
+                  >
                     Browse Cafes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/categories" className="hover:text-white transition-colors">
+                  <Link
+                    href="/categories"
+                    className="hover:text-white transition-colors"
+                  >
                     Categories
                   </Link>
                 </li>
                 <li>
-                  <Link href="/reviews" className="hover:text-white transition-colors">
+                  <Link
+                    href="/reviews"
+                    className="hover:text-white transition-colors"
+                  >
                     Reviews
                   </Link>
                 </li>
@@ -325,17 +401,32 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4">For Business</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <Link href={user && userProfile?.user_type === "business_owner" ? "/register-business" : "/auth/get-started"} className="hover:text-white transition-colors">
-                    {user && userProfile?.user_type === "business_owner" ? "List Your Cafe" : "Get Started"}
+                  <Link
+                    href={
+                      user && userProfile?.user_type === "business_owner"
+                        ? "/register-business"
+                        : "/auth/get-started"
+                    }
+                    className="hover:text-white transition-colors"
+                  >
+                    {user && userProfile?.user_type === "business_owner"
+                      ? "List Your Cafe"
+                      : "Get Started"}
                   </Link>
                 </li>
                 <li>
-                  <Link href="/business-dashboard" className="hover:text-white transition-colors">
+                  <Link
+                    href="/business-dashboard"
+                    className="hover:text-white transition-colors"
+                  >
                     Business Dashboard
                   </Link>
                 </li>
                 <li>
-                  <Link href="/pricing" className="hover:text-white transition-colors">
+                  <Link
+                    href="/pricing"
+                    className="hover:text-white transition-colors"
+                  >
                     Pricing
                   </Link>
                 </li>
@@ -346,17 +437,26 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <Link href="/help" className="hover:text-white transition-colors">
+                  <Link
+                    href="/help"
+                    className="hover:text-white transition-colors"
+                  >
                     Help Center
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="hover:text-white transition-colors">
+                  <Link
+                    href="/contact"
+                    className="hover:text-white transition-colors"
+                  >
                     Contact Us
                   </Link>
                 </li>
                 <li>
-                  <Link href="/terms" className="hover:text-white transition-colors">
+                  <Link
+                    href="/terms"
+                    className="hover:text-white transition-colors"
+                  >
                     Terms of Service
                   </Link>
                 </li>
@@ -365,10 +465,13 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>© 2024 SG Home Eats. All rights reserved. Made with ❤️ in Singapore</p>
+            <p>
+              © 2024 SG Home Eats. All rights reserved. Made with ❤️ in
+              Singapore
+            </p>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }

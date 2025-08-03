@@ -106,9 +106,21 @@ useEffect(() => {
 }, [])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setUserProfile(null)
+    try {
+      console.log("🔄 [AUTH] Signing out...")
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error("❌ [AUTH] Sign out error:", error)
+      } else {
+        console.log("✅ [AUTH] Signed out successfully")
+        setUser(null)
+        setUserProfile(null)
+        // Force redirect to home page
+        window.location.href = "/"
+      }
+    } catch (error) {
+      console.error("❌ [AUTH] Sign out failed:", error)
+    }
   }
 
   const value = {
