@@ -8,17 +8,87 @@ import {
   TrendingUp,
   Users,
   Coffee,
+  ChevronDown,
+  User,
+  Settings,
+  ShoppingBag,
+  LogOut,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
 
 export default function HomePage() {
   const { user, userProfile, signOut } = useAuth();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dynamicStats, setDynamicStats] = useState({
+    cafes: "200+",
+    customers: "15K+", 
+    orders: "50K+"
+  });
+
+  // Fetch dynamic stats on component mount
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => setDynamicStats(data))
+      .catch(err => {
+        console.error('Failed to fetch stats:', err)
+        // Keep default values on error
+      })
+  }, [])
+
+  // Helper function to get user initials for avatar
+  const getUserInitials = () => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name[0]}${userProfile.last_name[0]}`.toUpperCase()
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase()
+    }
+    return "U"
+  }
+
+  const getUserDisplayName = () => {
+    if (userProfile?.first_name) {
+      return userProfile.first_name
+    }
+    if (user?.email) {
+      return user.email.split('@')[0]
+    }
+    return "User"
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/browse?q=${encodeURIComponent(searchQuery.trim())}`)
+    } else {
+      router.push('/browse')
+    }
+  }
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch(e)
+    }
+  }
 
   const featuredCafes = [
     {
@@ -81,9 +151,9 @@ export default function HomePage() {
   ];
 
   const stats = [
-    { label: "Home Cafes", value: "200+", icon: Coffee },
-    { label: "Happy Customers", value: "15K+", icon: Users },
-    { label: "Orders Completed", value: "50K+", icon: TrendingUp },
+    { label: "Home Cafes", value: dynamicStats.cafes, icon: Coffee },
+    { label: "Happy Customers", value: dynamicStats.customers, icon: Users },
+    { label: "Orders Completed", value: dynamicStats.orders, icon: TrendingUp },
   ];
 
   return (
@@ -128,19 +198,52 @@ export default function HomePage() {
 
               {user ? (
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-600">
-                    Hi, {userProfile?.first_name}
-                  </span>
-                  <Button asChild variant="outline">
-                    <Link href="/dashboard">Dashboard</Link>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={signOut}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                    Sign Out
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="" />
+                          <AvatarFallback className="bg-orange-500 text-white text-sm">
+                            {getUserInitials()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-gray-700">
+                          Hi, {getUserDisplayName()}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center">
+                          <User className="mr-2 h-4 w-4" />
+                          Profile
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard" className="flex items-center">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/orders" className="flex items-center">
+                          <ShoppingBag className="mr-2 h-4 w-4" />
+                          My Orders
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={signOut}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
                 <>
@@ -175,21 +278,25 @@ export default function HomePage() {
 
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto mb-8">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleSearchKeyPress}
                     placeholder="Search for cuisine, location, or cafe name..."
                     className="pl-10 h-12 text-lg"
                   />
                 </div>
                 <Button
+                  type="submit"
                   size="lg"
                   className="bg-orange-600 hover:bg-orange-700 h-12 px-8"
                 >
                   Search
                 </Button>
-              </div>
+              </form>
             </div>
 
             {/* Stats */}
@@ -466,7 +573,7 @@ export default function HomePage() {
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
             <p>
-              © 2024 SG Home Eats. All rights reserved. Made with ❤️ in
+              © {new Date().getFullYear()} SG Home Eats. All rights reserved. Made with ❤️ in
               Singapore
             </p>
           </div>

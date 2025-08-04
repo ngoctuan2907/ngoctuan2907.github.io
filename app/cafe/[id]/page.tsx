@@ -1,15 +1,17 @@
 "use client"
 
-import { ArrowLeft, MapPin, Clock, Phone, Mail, Instagram, Star, Heart, Share2, MessageSquare, Map, Navigation } from "lucide-react"
+import { ArrowLeft, MapPin, Clock, Phone, Mail, Instagram, Star, Heart, Share2, MessageSquare, Map, Navigation, Plus, Minus, ShoppingCart, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/components/ui/use-toast"
@@ -24,6 +26,19 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
   const [reviewRating, setReviewRating] = useState(5)
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
   const [nearestLocations, setNearestLocations] = useState<any[]>([])
+  
+  // Cart state
+  const [cart, setCart] = useState<any[]>([])
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    pickupTime: '',
+    notes: ''
+  })
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false)
 
   // Mock data - in real app, this would be fetched based on params.id
   const cafe = {
@@ -50,19 +65,19 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
       {
         category: "Signature Kueh",
         items: [
-          { name: "Kueh Lapis", price: "$2.50", description: "Traditional 9-layer steamed cake" },
-          { name: "Ondeh Ondeh", price: "$1.80", description: "Pandan glutinous rice balls with gula melaka" },
-          { name: "Kueh Salat", price: "$3.20", description: "Coconut custard on glutinous rice base" },
-          { name: "Ang Ku Kueh", price: "$2.00", description: "Red tortoise cake with sweet mung bean filling" },
+          { id: "kueh-lapis", name: "Kueh Lapis", price: 2.50, description: "Traditional 9-layer steamed cake" },
+          { id: "ondeh-ondeh", name: "Ondeh Ondeh", price: 1.80, description: "Pandan glutinous rice balls with gula melaka" },
+          { id: "kueh-salat", name: "Kueh Salat", price: 3.20, description: "Coconut custard on glutinous rice base" },
+          { id: "ang-ku-kueh", name: "Ang Ku Kueh", price: 2.00, description: "Red tortoise cake with sweet mung bean filling" },
         ],
       },
       {
         category: "Main Dishes",
         items: [
-          { name: "Ayam Buah Keluak", price: "$15.80", description: "Chicken with black nuts in rich spicy gravy" },
-          { name: "Babi Pongteh", price: "$12.50", description: "Braised pork belly in fermented bean sauce" },
-          { name: "Laksa Lemak", price: "$8.80", description: "Rich coconut curry noodle soup" },
-          { name: "Mee Siam", price: "$7.50", description: "Tangy rice vermicelli in tamarind gravy" },
+          { id: "ayam-buah-keluak", name: "Ayam Buah Keluak", price: 15.80, description: "Chicken with black nuts in rich spicy gravy" },
+          { id: "babi-pongteh", name: "Babi Pongteh", price: 12.50, description: "Braised pork belly in fermented bean sauce" },
+          { id: "laksa-lemak", name: "Laksa Lemak", price: 8.80, description: "Rich coconut curry noodle soup" },
+          { id: "mee-siam", name: "Mee Siam", price: 7.50, description: "Tangy rice vermicelli in tamarind gravy" },
         ],
       },
     ],
@@ -238,6 +253,144 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
     }
   }
 
+  // Cart functionality
+  const addToCart = (item: any) => {
+    const existingItem = cart.find(cartItem => cartItem.id === item.id)
+    
+    if (existingItem) {
+      setCart(cart.map(cartItem => 
+        cartItem.id === item.id 
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem
+      ))
+    } else {
+      setCart([...cart, { ...item, quantity: 1 }])
+    }
+    
+    toast({
+      title: "Added to cart",
+      description: `${item.name} added to your order`,
+    })
+  }
+
+  const removeFromCart = (itemId: string) => {
+    setCart(cart.filter(item => item.id !== itemId))
+    toast({
+      title: "Removed from cart",
+      description: "Item removed from your order",
+    })
+  }
+
+  const updateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity === 0) {
+      removeFromCart(itemId)
+      return
+    }
+    
+    setCart(cart.map(item => 
+      item.id === itemId 
+        ? { ...item, quantity: newQuantity }
+        : item
+    ))
+  }
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+  }
+
+  const clearCart = () => {
+    setCart([])
+    setIsCartOpen(false)
+    toast({
+      title: "Cart cleared",
+      description: "All items removed from cart",
+    })
+  }
+
+  const handleCheckout = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to place an order",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (cart.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add items to your cart before checkout",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsCartOpen(false)
+    setIsCheckoutOpen(true)
+  }
+
+  const processOrder = async () => {
+    if (!customerInfo.name.trim() || !customerInfo.phone.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide your name and phone number",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsProcessingOrder(true)
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cart,
+          customerInfo,
+          businessId: cafe.id
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to process order')
+      }
+
+      toast({
+        title: "Order placed successfully!",
+        description: `Order ${result.orderNumber} has been confirmed`,
+      })
+
+      // Redirect to success page
+      window.location.href = result.url
+      
+      // Clear form and cart
+      setCart([])
+      setCustomerInfo({
+        name: '',
+        phone: '',
+        email: '',
+        pickupTime: '',
+        notes: ''
+      })
+      setIsCheckoutOpen(false)
+
+    } catch (error) {
+      console.error("Order processing error:", error)
+      toast({
+        title: "Order failed",
+        description: error instanceof Error ? error.message : "Failed to process order. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessingOrder(false)
+    }
+  }
+
   // Get current day for showing today's hours
   const getCurrentDay = () => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -273,6 +426,20 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
               <Button variant="ghost" size="sm" onClick={handleShare}>
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsCartOpen(true)}
+                className="relative"
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Cart
+                {cart.length > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full">
+                    {cart.reduce((total, item) => total + item.quantity, 0)}
+                  </Badge>
+                )}
               </Button>
             </div>
           </div>
@@ -384,12 +551,20 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                       <h3 className="text-xl font-semibold text-gray-900 mb-4">{category.category}</h3>
                       <div className="space-y-4">
                         {category.items.map((item, itemIndex) => (
-                          <div key={itemIndex} className="flex justify-between items-start">
+                          <div key={itemIndex} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-900">{item.name}</h4>
                               <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                              <span className="font-semibold text-orange-600 text-lg">S${item.price.toFixed(2)}</span>
                             </div>
-                            <span className="font-semibold text-orange-600 ml-4">{item.price}</span>
+                            <Button 
+                              onClick={() => addToCart(item)}
+                              className="bg-orange-600 hover:bg-orange-700 ml-4"
+                              size="sm"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -555,6 +730,189 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                 className="bg-orange-600 hover:bg-orange-700"
               >
                 {isSubmittingReview ? "Submitting..." : "Submit Review"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cart Dialog */}
+      <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Your Order
+              {cart.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearCart} className="text-red-600 hover:text-red-700">
+                  Clear All
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {cart.length === 0 ? (
+            <div className="text-center py-8">
+              <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Your cart is empty</p>
+              <p className="text-sm text-gray-400 mt-1">Add some delicious items from the menu!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cart.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">{item.name}</h4>
+                    <p className="text-sm text-orange-600">S${item.price.toFixed(2)} each</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="w-8 h-8 p-0"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </Button>
+                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="w-8 h-8 p-0"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFromCart(item.id)}
+                      className="w-8 h-8 p-0 text-red-600 hover:text-red-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-semibold">Total:</span>
+                  <span className="text-xl font-bold text-orange-600">
+                    S${getCartTotal().toFixed(2)}
+                  </span>
+                </div>
+                <Button 
+                  onClick={handleCheckout}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  Proceed to Checkout
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout Dialog */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Checkout</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Order Summary */}
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <h4 className="font-medium mb-2">Order Summary</h4>
+              {cart.map((item) => (
+                <div key={item.id} className="flex justify-between text-sm mb-1">
+                  <span>{item.name} x{item.quantity}</span>
+                  <span>S${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="border-t pt-2 mt-2 font-semibold">
+                Total: S${getCartTotal().toFixed(2)}
+              </div>
+            </div>
+
+            {/* Customer Information */}
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="customer-name">Name *</Label>
+                <Input
+                  id="customer-name"
+                  value={customerInfo.name}
+                  onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                  placeholder="Your full name"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="customer-phone">Phone Number *</Label>
+                <Input
+                  id="customer-phone"
+                  value={customerInfo.phone}
+                  onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                  placeholder="+65 9123 4567"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="customer-email">Email (Optional)</Label>
+                <Input
+                  id="customer-email"
+                  type="email"
+                  value={customerInfo.email}
+                  onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                  placeholder="your.email@example.com"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="pickup-time">Preferred Pickup Time</Label>
+                <Select value={customerInfo.pickupTime} onValueChange={(value) => setCustomerInfo({...customerInfo, pickupTime: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pickup time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asap">As soon as possible</SelectItem>
+                    <SelectItem value="30min">In 30 minutes</SelectItem>
+                    <SelectItem value="1hour">In 1 hour</SelectItem>
+                    <SelectItem value="2hours">In 2 hours</SelectItem>
+                    <SelectItem value="later">Later today</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="notes">Special Instructions (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  value={customerInfo.notes}
+                  onChange={(e) => setCustomerInfo({...customerInfo, notes: e.target.value})}
+                  placeholder="Any special requests or dietary requirements..."
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* Payment Info */}
+            <div className="border rounded-lg p-3 bg-blue-50">
+              <p className="text-sm text-blue-800">
+                💳 <strong>Payment:</strong> This is a demo order. No real payment will be processed.
+              </p>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} className="flex-1">
+                Back to Cart
+              </Button>
+              <Button 
+                onClick={processOrder}
+                disabled={isProcessingOrder}
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+              >
+                {isProcessingOrder ? "Processing..." : "Place Order"}
               </Button>
             </div>
           </div>

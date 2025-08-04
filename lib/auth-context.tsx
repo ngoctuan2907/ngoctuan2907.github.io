@@ -110,18 +110,32 @@ useEffect(() => {
   const signOut = async () => {
     try {
       console.log("🔄 [AUTH] Signing out...")
+      
+      // Clear Supabase session
       const { error } = await supabase.auth.signOut()
       if (error) {
         console.error("❌ [AUTH] Sign out error:", error)
-      } else {
-        console.log("✅ [AUTH] Signed out successfully")
-        setUser(null)
-        setUserProfile(null)
-        // Force redirect to home page using Next.js router
-        router.push("/")
+        throw error
       }
+
+      // Clear local state
+      setUser(null)
+      setUserProfile(null)
+      
+      // Clear any cached data
+      localStorage.removeItem('supabase.auth.token')
+      sessionStorage.clear()
+      
+      console.log("✅ [AUTH] Signed out successfully")
+      
+      // Force redirect to home page
+      window.location.href = "/"
     } catch (error) {
       console.error("❌ [AUTH] Sign out failed:", error)
+      // Even if there's an error, clear local state and redirect
+      setUser(null)
+      setUserProfile(null)
+      window.location.href = "/"
     }
   }
 
