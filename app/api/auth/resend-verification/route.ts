@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabaseClient"  // 🟢 Use the explicit anon client
+import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +11,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    
+    // Create supabase client for this request
+    const supabase = createClient()
     
     await supabase.auth.resend({
       type: 'signup',

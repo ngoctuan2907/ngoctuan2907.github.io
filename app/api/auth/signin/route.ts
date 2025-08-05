@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabaseClient"  // 🟢 Use the explicit anon client
+import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
 import { signInSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
     const validatedData = signInSchema.parse(body)
     console.log("✅ [VERCEL LOG] Signin data validation successful")
     
-    // Sign in user directly with anon client
+    // Create supabase client for this request
+    const supabase = createClient()
+    
+    // Sign in user directly with client
     console.log("🔄 [VERCEL LOG] Calling supabase.auth.signInWithPassword...")
     const { data, error } = await supabase.auth.signInWithPassword({
       email: validatedData.email,

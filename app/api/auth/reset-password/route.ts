@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabaseClient"  // 🟢 Use the explicit anon client
+import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
 import { resetPasswordSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
@@ -8,6 +8,9 @@ export async function POST(request: NextRequest) {
     
     // Validate input
     const validatedData = resetPasswordSchema.parse(body)
+    
+    // Create supabase client for this request
+    const supabase = createClient()
     
     // Send reset password email
     const { error } = await supabase.auth.resetPasswordForEmail(validatedData.email)

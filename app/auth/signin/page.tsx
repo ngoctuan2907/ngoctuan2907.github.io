@@ -14,9 +14,13 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react"
 import { signInSchema, type SignInFormData } from "@/lib/auth-schemas"
+import { createClient } from "@/lib/supabaseClient" 
+import { useSearchParams } from "next/navigation"
 
 export default function SignInPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard"
   const { toast } = useToast()
   const { user, refreshUser } = useAuth()
   
@@ -35,7 +39,7 @@ export default function SignInPage() {
   // Redirect to dashboard after user context is updated
   useEffect(() => {
     if (user) {
-      router.push("/dashboard")
+      router.push(redirectTo)
     }
   }, [user, router])
 
@@ -44,20 +48,17 @@ export default function SignInPage() {
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      const supabase = createClient()
+      const { data: result, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        setError(result.error || "Failed to sign in")
+      if (error) {
+        setError(error.message)
         return
       }
 
-      // Refresh user context
+      // Now that supabase.client has the session, refresh and redirect:
       await refreshUser()
 
       toast({

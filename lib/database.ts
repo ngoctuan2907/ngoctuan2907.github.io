@@ -1,14 +1,7 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "./supabaseClient"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase environment variables are not set. Please check your .env.local file.")
-}
-
-// 🔴 Keep this for backward compatibility, but prefer importing from supabaseClient.ts
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// 🔄 Use the new SSR client for database operations
+export const supabase = createClient()
 
 // Database types
 export interface UserProfile {

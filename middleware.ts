@@ -1,8 +1,15 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
+import { createServerClientMiddleware } from '@/lib/supabase-server'
 
 export async function middleware(req: NextRequest) {
+  const response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
+
+  const supabase = createServerClientMiddleware(req, response)
+
   // Protected routes that require authentication
   const protectedRoutes = [
     '/dashboard',
@@ -31,23 +38,33 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // Get auth token from cookies
-  const authToken = req.cookies.get('sb-access-token')?.value || 
-                   req.cookies.get('supabase-auth-token')?.value
+  try {
+    // Get the current user
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-  // Redirect unauthenticated users from protected routes
-  if (isProtectedRoute && !authToken) {
-    const redirectUrl = new URL('/auth/signin', req.url)
-    redirectUrl.searchParams.set('redirectTo', pathname)
-    return NextResponse.redirect(redirectUrl)
+    // Redirect unauthenticated users from protected routes
+    if (isProtectedRoute && (!user || error)) {
+      const redirectUrl = new URL('/auth/signin', req.url)
+      redirectUrl.searchParams.set('redirectTo', pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    // Redirect authenticated users from auth routes to dashboard  
+    if (isAuthRoute && user && !error) {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+
+  } catch (error) {
+    console.error('Middleware auth error:', error)
+    // If there's an auth error and it's a protected route, redirect to signin
+    if (isProtectedRoute) {
+      const redirectUrl = new URL('/auth/signin', req.url)
+      redirectUrl.searchParams.set('redirectTo', pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
-  // Redirect authenticated users from auth routes to dashboard  
-  if (isAuthRoute && authToken) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
-
-  return NextResponse.next()
+  return response
 }
 
 export const config = {

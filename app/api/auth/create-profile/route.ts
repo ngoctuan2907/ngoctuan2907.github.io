@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-// 🟢 Use public client for auth operations
-import { supabase } from "@/lib/supabaseClient"
+// 🟢 Use SSR client for auth operations
+import { createClient } from "@/lib/supabaseClient"
 
 export async function POST(request: NextRequest) {
   console.log("🔄 [VERCEL LOG] Create profile API called")
   
   try {
+    const supabase = createClient()
     const authHeader = request.headers.get("authorization")
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)

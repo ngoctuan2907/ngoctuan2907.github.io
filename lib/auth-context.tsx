@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { User as SupabaseUser } from "@supabase/supabase-js"
-import { supabase } from "./supabaseClient"  // 🟢 Use the explicit anon client
+import { createClient } from "./supabaseClient"  // 🟢 Use the new SSR client
 import { type UserProfile } from "./database"
 
 interface AuthContextType {
@@ -21,6 +21,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Initialize supabase client for this component
+  const supabase = createClient()
 
   const refreshUser = async () => {
     try {
@@ -28,47 +31,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user)
       
       if (user) {
-        const { data: profile, error } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .single()
-          
-        if (error) {
-          console.error("Error fetching user profile:", error)
-          
-          // If profile doesn't exist, try to create it from user metadata
-          if (error.code === 'PGRST116') { // No rows returned
-            console.log("🔄 [AUTH CONTEXT] Profile not found, attempting to create from metadata...")
+        try {
+          const { data: profile, error } = await supabase
+            .from("user_profiles")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle()
+
+          if (error) {
+            console.error("Error fetching user profile:", error)
             
-            const userMetadata = user.user_metadata || {}
-            const profileData = {
-              user_id: user.id,
-              first_name: userMetadata.first_name || '',
-              last_name: userMetadata.last_name || '',
-              user_type: userMetadata.user_type || 'customer',
-              phone: userMetadata.phone || null,
-              intended_business_name: userMetadata.intended_business_name || null,
-            }
-            
-            const { data: newProfile, error: createError } = await supabase
-              .from("user_profiles")
-              .insert(profileData)
-              .select()
-              .single()
+            // If profile doesn't exist, try to create it from user metadata
+            if (error.code === 'PGRST116' || error.message?.includes('no rows') || !profile) {
+              console.log("🔄 [AUTH CONTEXT] Profile not found, attempting to create from metadata...")
               
-            if (createError) {
-              console.error("❌ [AUTH CONTEXT] Failed to create profile:", createError)
-              setUserProfile(null)
+              const userMetadata = user.user_metadata || {}
+              const profileData = {
+                user_id: user.id,
+                first_name: userMetadata.first_name || '',
+                last_name: userMetadata.last_name || '',
+                user_type: userMetadata.user_type || 'customer',
+                phone: userMetadata.phone || null,
+                intended_business_name: userMetadata.intended_business_name || null,
+              }
+              
+              const { data: newProfile, error: createError } = await supabase
+                .from("user_profiles")
+                .insert(profileData)
+                .select()
+                .single()
+                
+              if (createError) {
+                console.error("❌ [AUTH CONTEXT] Failed to create profile:", createError)
+                setUserProfile(null)
+              } else {
+                console.log("✅ [AUTH CONTEXT] Profile created successfully:", newProfile)
+                setUserProfile(newProfile)
+              }
             } else {
-              console.log("✅ [AUTH CONTEXT] Profile created successfully:", newProfile)
-              setUserProfile(newProfile)
+              setUserProfile(null)
             }
           } else {
-            setUserProfile(null)
+            setUserProfile(profile)
           }
-        } else {
-          setUserProfile(profile)
+        } catch (profileError) {
+          console.error("❌ [AUTH CONTEXT] Profile fetch error:", profileError)
+          setUserProfile(null)
         }
       } else {
         setUserProfile(null)
@@ -84,18 +92,28 @@ useEffect(() => {
   refreshUser()
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
+    async (event: any, session: any) => {
       setLoading(true)
       setUser(session?.user ?? null)
 
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .single()
+        try {
+          const { data: profile, error } = await supabase
+            .from("user_profiles")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .maybeSingle()
 
-        setUserProfile(profile)
+          if (error) {
+            console.error("❌ [AUTH STATE] Profile fetch error:", error)
+            setUserProfile(null)
+          } else {
+            setUserProfile(profile)
+          }
+        } catch (profileError) {
+          console.error("❌ [AUTH STATE] Profile query error:", profileError)
+          setUserProfile(null)
+        }
       } else {
         setUserProfile(null)
       }
@@ -105,7 +123,7 @@ useEffect(() => {
   )
 
   return () => subscription.unsubscribe()
-}, [])
+}, [supabase])
 
   const signOut = async () => {
     try {

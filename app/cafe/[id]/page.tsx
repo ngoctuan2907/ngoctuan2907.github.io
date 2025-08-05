@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -691,6 +691,9 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Write a Review for {cafe.name}</DialogTitle>
+            <DialogDescription>
+              Share your thoughts about this cafe
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -748,6 +751,9 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                 </Button>
               )}
             </DialogTitle>
+            <DialogDescription>
+              Review your selected items before proceeding to checkout
+            </DialogDescription>
           </DialogHeader>
           
           {cart.length === 0 ? (
@@ -818,6 +824,9 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
+            <DialogDescription>
+              Please provide your details to complete the order
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">

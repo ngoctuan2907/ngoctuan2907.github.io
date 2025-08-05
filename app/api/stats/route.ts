@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabaseClient'
 
 export async function GET() {
   try {
     console.log("📊 [VERCEL LOG] Stats API called at:", new Date().toISOString())
 
+    const supabase = createClient()
     let cafesCount = 4 // Default to our mock cafes
     let customersCount = 1247 // Mock data
     let ordersCount = 5692 // Mock data

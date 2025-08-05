@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClientComponent } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
@@ -21,10 +21,7 @@ export async function GET(request: NextRequest) {
     searchParams: Object.fromEntries(searchParams.entries())
   })
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createServerClientComponent()
 
   // Handle OTP verification (email confirmation, password reset, etc.)
   if (token_hash && type) {

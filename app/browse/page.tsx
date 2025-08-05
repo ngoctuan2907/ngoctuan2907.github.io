@@ -14,7 +14,8 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle,
-  DialogTrigger 
+  DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { 
@@ -259,6 +260,9 @@ export default function BrowsePage() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Filter Cafes</DialogTitle>
+                  <DialogDescription id="filter-cafes-desc">
+                    Refine your search
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6">
                   {/* Sort By */}
@@ -326,12 +330,12 @@ export default function BrowsePage() {
                   {/* Rating */}
                   <div>
                     <label className="text-sm font-medium mb-2 block">Minimum Rating</label>
-                    <Select value={minRating?.toString() || ""} onValueChange={(value) => setMinRating(value ? parseFloat(value) : null)}>
+                    <Select value={minRating != null ? minRating.toString() : "any"} onValueChange={(value) => setMinRating(value === "any" ? null : parseFloat(value))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any rating" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any rating</SelectItem>
+                        <SelectItem value="any">Any rating</SelectItem>
                         {ratingOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value.toString()}>
                             {option.label}
