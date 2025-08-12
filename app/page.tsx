@@ -167,12 +167,6 @@ export default function HomePage() {
                 <span className="text-white font-bold text-lg">SG</span>
               </div>
               <div>
-                <span className="font-bold text-xl text-gray-900">
-                  SG Home Eats
-                </span>
-                <p className="text-xs text-gray-500">
-                  Discover Local Home Cafes
-                </p>
               </div>
             </Link>
 
