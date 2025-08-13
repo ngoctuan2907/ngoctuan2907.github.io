@@ -9,41 +9,65 @@ export async function GET() {
     const supabase = createServerClientForApi()
     const now = new Date().toISOString()
 
-    // Explicit FK join with alias `business`
-    const { data, error } = await supabase
+    // First, try to get ads without join to see if we can fetch them at all
+    const { data: adsData, error: adsError } = await supabase
       .from('advertisements')
-      .select(`
-        id, shop_id, tier, start_at, end_at, priority,
-        business:businesses!advertisements_shop_id_fkey (
-          id, business_name, slug, is_active
-        )
-      `)
+      .select('*')
       .lte('start_at', now)
       .gte('end_at', now)
-      // Only active businesses
-      .eq('business.is_active', true)
-      // Sort: top tier first (desc), then higher priority first, then earliest ending
       .order('tier', { ascending: false })
       .order('priority', { ascending: false })
       .order('end_at', { ascending: true })
       .limit(10)
 
-    if (error) throw error
+    // Handle the case where the advertisements table doesn't exist yet
+    if (adsError && adsError.code === '42P01') {
+      console.log('Advertisements table does not exist yet, returning empty result')
+      return NextResponse.json({ success: true, ads: [], count: 0 })
+    }
 
-    const raw = data || []
-    const ads = raw.map((row: any) => {
-      const biz = Array.isArray(row.business) ? row.business[0] : row.business
-      return { ...row, business: biz }
-    }).filter(a => a.business && a.business.is_active)
+    if (adsError) {
+      console.error('Error fetching ads:', adsError)
+      return NextResponse.json({ success: false, error: 'Failed to fetch ads', ads: [], count: 0 }, { status: 500 })
+    }
 
-    const payload = ads.map((a: any) => ({
-      id: a.id,
-      shop_id: a.shop_id,
-      shop_name: a.business.business_name,
-      shop_slug: a.business.slug,
-      tier: a.tier,
-      end_at: a.end_at
-    }))
+    // If no ads, return empty result
+    if (!adsData || adsData.length === 0) {
+      return NextResponse.json({ success: true, ads: [], count: 0 })
+    }
+
+    // Get business IDs from ads
+    const shopIds = adsData.map(ad => ad.shop_id)
+
+    // Fetch businesses separately
+    const { data: businessData, error: businessError } = await supabase
+      .from('businesses')
+      .select('id, business_name, slug, is_active')
+      .in('id', shopIds)
+      .eq('is_active', true)
+
+    if (businessError) {
+      console.error('Error fetching businesses:', businessError)
+      return NextResponse.json({ success: false, error: 'Failed to fetch businesses', ads: [], count: 0 }, { status: 500 })
+    }
+
+    // Create business lookup map
+    const businessMap: Record<string, any> = (businessData || []).reduce((acc: Record<string, any>, business) => {
+      acc[business.id] = business
+      return acc
+    }, {})
+
+    // Combine ads with business data
+    const payload = adsData
+      .filter(ad => businessMap[ad.shop_id]) // Only include ads for active businesses
+      .map(ad => ({
+        id: ad.id,
+        shop_id: ad.shop_id,
+        shop_name: businessMap[ad.shop_id].business_name,
+        shop_slug: businessMap[ad.shop_id].slug,
+        tier: ad.tier,
+        end_at: ad.end_at
+      }))
 
     return NextResponse.json({ success: true, ads: payload, count: payload.length })
   } catch (error) {
