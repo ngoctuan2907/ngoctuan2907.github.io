@@ -1,7 +1,7 @@
-import { createClient } from "./supabaseClient"
+import { type SupabaseClient } from "@supabase/supabase-js"
 
-// 🔄 Use the new SSR client for database operations
-export const supabase = createClient()
+// Remove global supabase client export - functions now accept client parameter
+// export const supabase = createClient() // 🔴 REMOVED
 
 // Database types
 export interface UserProfile {
@@ -16,9 +16,69 @@ export interface UserProfile {
   updated_at: string
 }
 
+// Multi-tenant types
+export interface Stakeholder {
+  id: string
+  name: string
+  created_by: string
+  stripe_customer_id?: string
+  status: "inactive" | "active"
+  created_at: string
+}
+
+export interface Membership {
+  id: string
+  user_id: string
+  stakeholder_id?: string
+  shop_id?: string
+  role: "stakeholder_owner" | "staff" | "clerk"
+  created_at: string
+}
+
+export interface Subscription {
+  id: string
+  stakeholder_id: string
+  plan: string
+  status: "active" | "past_due" | "canceled"
+  current_period_end?: string
+  stripe_subscription_id?: string
+  created_at: string
+}
+
+export interface PlanFeatures {
+  plan: string
+  max_shops: number
+  ad_tier: "none" | "standard" | "top"
+}
+
+export interface Voucher {
+  id: string
+  shop_id: string
+  code: string
+  discount_type: "percent" | "amount"
+  discount_value: number
+  valid_from?: string
+  valid_to?: string
+  active: boolean
+  created_by: string
+  created_at: string
+}
+
+export interface Advertisement {
+  id: string
+  shop_id: string
+  tier: "standard" | "top"
+  start_at: string
+  end_at: string
+  priority: number
+  created_by: string
+  created_at: string
+}
+
 export interface Business {
   id: string
   owner_id: string  // References auth.users.id
+  stakeholder_id?: string  // References stakeholders.id
   business_name: string
   slug: string
   description: string
@@ -30,6 +90,7 @@ export interface Business {
   email: string
   price_range: "$" | "$$" | "$$$" | "$$$$"
   status: "pending" | "active" | "suspended" | "closed"
+  is_active?: boolean
   instagram_handle?: string
   facebook_url?: string
   whatsapp_number?: string
@@ -80,7 +141,7 @@ export interface Order {
 }
 
 // Database helper functions
-export async function getBusinesses(filters?: {
+export async function getBusinesses(supabase: SupabaseClient, filters?: {
   district?: string
   cuisine?: string
   search?: string
@@ -114,7 +175,7 @@ export async function getBusinesses(filters?: {
   return data
 }
 
-export async function getBusinessBySlug(slug: string) {
+export async function getBusinessBySlug(supabase: SupabaseClient, slug: string) {
   const { data, error } = await supabase
     .from("businesses")
     .select(`
@@ -139,7 +200,7 @@ export async function getBusinessBySlug(slug: string) {
   return data
 }
 
-export async function createBusinessView(businessId: string, viewerIp?: string, userAgent?: string) {
+export async function createBusinessView(supabase: SupabaseClient, businessId: string, viewerIp?: string, userAgent?: string) {
   const { error } = await supabase.from("business_views").insert({
     business_id: businessId,
     viewer_ip: viewerIp,
@@ -149,7 +210,7 @@ export async function createBusinessView(businessId: string, viewerIp?: string, 
   if (error) throw error
 }
 
-export async function getBusinessAnalytics(businessId: string) {
+export async function getBusinessAnalytics(supabase: SupabaseClient, businessId: string) {
   // Get total views
   const { count: totalViews } = await supabase
     .from("business_views")
@@ -164,7 +225,7 @@ export async function getBusinessAnalytics(businessId: string) {
     .eq("status", "published")
 
   const averageRating = reviewsData?.length
-    ? reviewsData.reduce((sum, review) => sum + review.rating, 0) / reviewsData.length
+    ? reviewsData.reduce((sum: number, review: any) => sum + review.rating, 0) / reviewsData.length
     : 0
 
   // Get orders count
@@ -182,25 +243,29 @@ export async function getBusinessAnalytics(businessId: string) {
 }
 
 // Authentication helper functions
-export async function signUp(email: string, password: string, userData: {
+export async function signUp(supabase: SupabaseClient, email: string, password: string, userData: {
   firstName: string
   lastName: string
   userType: "customer" | "business_owner"
   phone?: string
   intendedBusinessName?: string
 }) {
-  console.log("🔄 [VERCEL LOG] signUp function called for:", email)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("🔄 [VERCEL LOG] signUp function called for:", email)
   
-  // 🚨 DEBUG: Log which keys are being used
-  console.log("🔍 [VERCEL LOG] Environment check:", {
-    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    anonKeyPrefix: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20),
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL
-  })
+    // 🚨 DEBUG: Log which keys are being used
+    console.log("🔍 [VERCEL LOG] Environment check:", {
+      hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      anonKeyPrefix: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20),
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL
+    })
+  }
   
   try {
-    console.log("📞 [VERCEL LOG] Calling supabase.auth.signUp...")
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("📞 [VERCEL LOG] Calling supabase.auth.signUp...")
+    }
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -227,16 +292,20 @@ export async function signUp(email: string, password: string, userData: {
       throw error
     }
 
-    console.log("✅ [VERCEL LOG] Supabase auth signup successful:", {
-      userId: data.user?.id,
-      userEmail: data.user?.email,
-      emailConfirmed: data.user?.email_confirmed_at,
-      sessionExists: !!data.session
-    })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("✅ [VERCEL LOG] Supabase auth signup successful:", {
+        userId: data.user?.id,
+        userEmail: data.user?.email,
+        emailConfirmed: data.user?.email_confirmed_at,
+        sessionExists: !!data.session
+      })
+    }
 
     // Create user profile after successful signup
     if (data.user) {
-      console.log("👤 [VERCEL LOG] Creating user profile for user:", data.user.id)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log("👤 [VERCEL LOG] Creating user profile for user:", data.user.id)
+      }
       
       const profileData = {
         user_id: data.user.id,
@@ -247,7 +316,9 @@ export async function signUp(email: string, password: string, userData: {
         intended_business_name: userData.intendedBusinessName || null,
       }
       
-      console.log("📝 [VERCEL LOG] Profile data to insert:", profileData)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log("📝 [VERCEL LOG] Profile data to insert:", profileData)
+      }
       
       const { data: insertedProfile, error: profileError } = await supabase
         .from("user_profiles")
@@ -264,10 +335,14 @@ export async function signUp(email: string, password: string, userData: {
         })
         // Don't throw here - user is created, profile creation can be retried
       } else {
-        console.log("✅ [VERCEL LOG] User profile created successfully:", insertedProfile)
+        if (process.env.NODE_ENV !== 'production') {
+          console.log("✅ [VERCEL LOG] User profile created successfully:", insertedProfile)
+        }
       }
     } else {
-      console.warn("⚠️  [VERCEL LOG] No user returned from Supabase signup")
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn("⚠️  [VERCEL LOG] No user returned from Supabase signup")
+      }
     }
 
     return data
@@ -281,7 +356,7 @@ export async function signUp(email: string, password: string, userData: {
   }
 }
 
-export async function signIn(email: string, password: string) {
+export async function signIn(supabase: SupabaseClient, email: string, password: string) {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -311,23 +386,23 @@ export async function signIn(email: string, password: string) {
   }
 }
 
-export async function signOut() {
+export async function signOut(supabase: SupabaseClient) {
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
 
-export async function resetPassword(email: string) {
+export async function resetPassword(supabase: SupabaseClient, email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email)
   if (error) throw error
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUser(supabase: SupabaseClient) {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error) throw error
   return user
 }
 
-export async function getUserProfile(userId: string) {
+export async function getUserProfile(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("user_profiles")
     .select("*")
@@ -338,7 +413,7 @@ export async function getUserProfile(userId: string) {
   return data
 }
 
-export async function checkEmailExists(email: string): Promise<UserProfile | null> {
+export async function checkEmailExists(supabase: SupabaseClient, email: string): Promise<UserProfile | null> {
   try {
     // Use Supabase Admin API to check if user exists by email
     // For now, we'll check the user_profiles table directly
@@ -363,7 +438,7 @@ export async function checkEmailExists(email: string): Promise<UserProfile | nul
   }
 }
 
-export async function resendEmailConfirmation(email: string) {
+export async function resendEmailConfirmation(supabase: SupabaseClient, email: string) {
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email,

@@ -1,18 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
+import { createServerClientForApi } from "@/lib/supabase-api"
 import { resetPasswordSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createServerClientForApi()
     const body = await request.json()
     
     // Validate input
     const validatedData = resetPasswordSchema.parse(body)
     
-    // Create supabase client for this request
-    const supabase = createClient()
-    
-    // Send reset password email
+    // Send reset password email with server client
     const { error } = await supabase.auth.resetPasswordForEmail(validatedData.email)
     
     if (error) {

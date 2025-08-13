@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/database"
+import { createServerClientForApi } from "@/lib/supabase-api"
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const supabase = createServerClientForApi()
   try {
     const body = await request.json()
     const { business_id, customer_id, rating, comment } = body

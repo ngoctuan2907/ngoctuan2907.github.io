@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
+import { createServerClientForApi } from "@/lib/supabase-api"
 import { checkEmailExists } from "@/lib/database"
 import { signUpSchema } from "@/lib/auth-schemas"
 
@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
   console.log("🚀 [VERCEL LOG] Signup API called at:", new Date().toISOString())
   
   try {
+    const supabase = createServerClientForApi()
     const body = await request.json()
     console.log("📥 [VERCEL LOG] Request body received:", {
       email: body.email,
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     console.log("✅ [VERCEL LOG] Data validation successful")
     
     // Check if email already exists (temporarily disabled to avoid conflicts)
-    // const existingUser = await checkEmailExists(validatedData.email)
+    // const existingUser = await checkEmailExists(supabase, validatedData.email)
     // if (existingUser) {
     //   return NextResponse.json(
     //     { 
@@ -43,17 +44,12 @@ export async function POST(request: NextRequest) {
       effectiveRedirectUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     })
     
-    // 🔴 CRITICAL: Force production URL for email redirects
-    const emailRedirectTo = process.env.NEXT_PUBLIC_SITE_URL 
-      ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
-      : 'https://v0-singapore-cafe-websites.vercel.app/auth/callback'  // 🟢 Hardcoded fallback
+    // � Use production URL for email verification redirects
+    const emailRedirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`
     
     console.log("📧 [VERCEL LOG] Email redirect URL:", emailRedirectTo)
     
-    // Create supabase client for this request
-    const supabase = createClient()
-    
-    // Create user account directly with client
+    // Create user account with server client - now creating profile server-side
     const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
@@ -85,7 +81,7 @@ export async function POST(request: NextRequest) {
       sessionExists: !!data.session
     })
 
-    // Create user profile after successful signup
+    // Create user profile server-side after successful signup
     if (data.user) {
       console.log("👤 [VERCEL LOG] Creating user profile for user:", data.user.id)
       

@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
+import { createServerClientForApi } from "@/lib/supabase-api"
 import { signInSchema } from "@/lib/auth-schemas"
 
 export async function POST(request: NextRequest) {
   console.log("🔐 [VERCEL LOG] Signin API called at:", new Date().toISOString())
   
   try {
+    const supabase = createServerClientForApi()
     const body = await request.json()
     console.log("📥 [VERCEL LOG] Signin request for email:", body.email)
     
@@ -13,10 +14,7 @@ export async function POST(request: NextRequest) {
     const validatedData = signInSchema.parse(body)
     console.log("✅ [VERCEL LOG] Signin data validation successful")
     
-    // Create supabase client for this request
-    const supabase = createClient()
-    
-    // Sign in user directly with client
+    // Sign in user with server client
     console.log("🔄 [VERCEL LOG] Calling supabase.auth.signInWithPassword...")
     const { data, error } = await supabase.auth.signInWithPassword({
       email: validatedData.email,

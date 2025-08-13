@@ -1,103 +1,49 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// 🔶 Server client for server-side operations with cookies
 export function createServerClientComponent() {
-  const cookieStore = cookies()
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  const store = cookies()
+  return createServerClient(url, anon, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
+      get: (name: string) => store.get(name)?.value,
+      set: (name: string, value: string, options: CookieOptions) => {
+        store.set(name, value, options)
       },
-      set(name: string, value: string, options: CookieOptions) {
-        try {
-          cookieStore.set({ name, value, ...options })
-        } catch (error) {
-          // The `set` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing
-          // user sessions.
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          cookieStore.set({ name, value: '', ...options })
-        } catch (error) {
-          // The `delete` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing
-          // user sessions.
-        }
+      remove: (name: string, options: CookieOptions) => {
+        store.set(name, '', { ...options, maxAge: 0 })
       },
     },
   })
 }
 
-// 🔧 Server client for middleware
-export function createServerClientMiddleware(
-  request: NextRequest,
-  response: NextResponse
-) {
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+export function createServerClientMiddleware(req: NextRequest, res: NextResponse) {
+  return createServerClient(url, anon, {
     cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value
+      get: (name: string) => req.cookies.get(name)?.value,
+      set: (name: string, value: string, options: CookieOptions) => {
+        res.cookies.set(name, value, options)
       },
-      set(name: string, value: string, options: CookieOptions) {
-        request.cookies.set({
-          name,
-          value,
-          ...options,
-        })
-        response.cookies.set({
-          name,
-          value,
-          ...options,
-        })
-      },
-      remove(name: string, options: CookieOptions) {
-        request.cookies.set({
-          name,
-          value: '',
-          ...options,
-        })
-        response.cookies.set({
-          name,
-          value: '',
-          ...options,
-        })
+      remove: (name: string, options: CookieOptions) => {
+        res.cookies.set(name, '', { ...options, maxAge: 0 })
       },
     },
   })
 }
 
-// 🔒 Admin client - SERVER-ONLY! 
-// Only create this in server-side contexts where SUPABASE_SERVICE_ROLE_KEY is available
 export function createSupabaseAdmin() {
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!supabaseServiceKey) {
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRole) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for admin operations")
   }
-  
-  return createServerClient(
-    supabaseUrl, 
-    supabaseServiceKey,
-    {
-      cookies: {
-        get() {
-          return undefined
-        },
-        set() {
-          // no-op
-        },
-        remove() {
-          // no-op
-        },
-      },
-    }
-  )
+  return createServerClient(url, serviceRole, {
+    cookies: {
+      get: () => undefined,
+      set: () => {},
+      remove: () => {},
+    },
+  })
 }

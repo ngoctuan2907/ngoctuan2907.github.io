@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   
-  // Initialize supabase client for this component
+  // Initialize supabase client for this component - create once
   const supabase = createClient()
 
   const refreshUser = async () => {
@@ -41,33 +41,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (error) {
             console.error("Error fetching user profile:", error)
             
-            // If profile doesn't exist, try to create it from user metadata
+            // If profile doesn't exist, just set to null - profile creation should be server-side
             if (error.code === 'PGRST116' || error.message?.includes('no rows') || !profile) {
-              console.log("🔄 [AUTH CONTEXT] Profile not found, attempting to create from metadata...")
-              
-              const userMetadata = user.user_metadata || {}
-              const profileData = {
-                user_id: user.id,
-                first_name: userMetadata.first_name || '',
-                last_name: userMetadata.last_name || '',
-                user_type: userMetadata.user_type || 'customer',
-                phone: userMetadata.phone || null,
-                intended_business_name: userMetadata.intended_business_name || null,
+              if (process.env.NODE_ENV !== 'production') {
+                console.log("🔄 [AUTH CONTEXT] Profile not found - profile creation should happen server-side")
               }
-              
-              const { data: newProfile, error: createError } = await supabase
-                .from("user_profiles")
-                .insert(profileData)
-                .select()
-                .single()
-                
-              if (createError) {
-                console.error("❌ [AUTH CONTEXT] Failed to create profile:", createError)
-                setUserProfile(null)
-              } else {
-                console.log("✅ [AUTH CONTEXT] Profile created successfully:", newProfile)
-                setUserProfile(newProfile)
-              }
+              setUserProfile(null)
             } else {
               setUserProfile(null)
             }
@@ -123,11 +102,13 @@ useEffect(() => {
   )
 
   return () => subscription.unsubscribe()
-}, [supabase])
+}, []) // Empty dependency array - supabase client is created once
 
   const signOut = async () => {
     try {
-      console.log("🔄 [AUTH] Signing out...")
+      if (process.env.NODE_ENV !== 'production') {
+        console.log("🔄 [AUTH] Signing out...")
+      }
       
       // Clear Supabase session
       const { error } = await supabase.auth.signOut()
@@ -140,20 +121,20 @@ useEffect(() => {
       setUser(null)
       setUserProfile(null)
       
-      // Clear any cached data
-      localStorage.removeItem('supabase.auth.token')
-      sessionStorage.clear()
+      if (process.env.NODE_ENV !== 'production') {
+        console.log("✅ [AUTH] Signed out successfully")
+      }
       
-      console.log("✅ [AUTH] Signed out successfully")
-      
-      // Force redirect to home page
-      window.location.href = "/"
+      // Use Next.js router to navigate instead of hard redirect
+      router.push("/")
+      router.refresh()
     } catch (error) {
       console.error("❌ [AUTH] Sign out failed:", error)
       // Even if there's an error, clear local state and redirect
       setUser(null)
       setUserProfile(null)
-      window.location.href = "/"
+      router.push("/")
+      router.refresh()
     }
   }
 

@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabaseClient"  // 🟢 Use the new SSR client
+import { createServerClientForApi } from "@/lib/supabase-api"
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createServerClientForApi()
     const { email } = await request.json()
     
     if (!email) {
@@ -12,9 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Create supabase client for this request
-    const supabase = createClient()
-    
+    // Resend verification email with server client
     await supabase.auth.resend({
       type: 'signup',
       email,

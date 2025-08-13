@@ -1,11 +1,12 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { createServerClientForApi } from '@/lib/supabase-api'
 import { redirect } from 'next/navigation'
 
 export async function GET(request: NextRequest) {
   console.log("🔄 [VERCEL LOG] Auth confirmation called at:", new Date().toISOString())
   
+  const supabase = createServerClientForApi()
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null

@@ -1,18 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getBusinesses } from "@/lib/database"
+import { createServerClientForApi } from "@/lib/supabase-api"
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createServerClientForApi()
     const { searchParams } = request.nextUrl
     const district = searchParams.get("district") || undefined
     const cuisine = searchParams.get("cuisine") || undefined
     const search = searchParams.get("search") || undefined
     const limit = searchParams.get("limit") ? Number.parseInt(searchParams.get("limit")!) : undefined
 
-    const businesses = await getBusinesses({
+    const businesses = await getBusinesses(supabase, {
       district,
       cuisine,
       search,

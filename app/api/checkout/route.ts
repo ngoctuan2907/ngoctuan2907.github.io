@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabaseClient'
+import { createServerClientForApi } from "@/lib/supabase-api"
 
 // This would normally use Stripe SDK, but for MVP we'll simulate it
 // import Stripe from 'stripe'
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log("💳 [VERCEL LOG] Checkout API called at:", new Date().toISOString())
 
-    const supabase = createClient()
+    const supabase = createServerClientForApi()
     const body = await request.json()
     const { items, customerInfo, businessId } = body
 
