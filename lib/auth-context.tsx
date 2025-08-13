@@ -110,13 +110,9 @@ useEffect(() => {
         console.log("🔄 [AUTH] Signing out...")
       }
       
-      // Clear Supabase session
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error("❌ [AUTH] Sign out error:", error)
-        throw error
-      }
-
+      // Call server-side signout endpoint to ensure cookies are cleared
+      await fetch('/api/auth/signout', { method: 'POST' })
+      
       // Clear local state
       setUser(null)
       setUserProfile(null)
@@ -125,7 +121,7 @@ useEffect(() => {
         console.log("✅ [AUTH] Signed out successfully")
       }
       
-      // Use Next.js router to navigate instead of hard redirect
+      // Use Next.js router to navigate and refresh
       router.push("/")
       router.refresh()
     } catch (error) {

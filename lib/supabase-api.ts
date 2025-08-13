@@ -10,10 +10,10 @@ export function createServerClientForApi() {
     cookies: {
       get: (name: string) => store.get(name)?.value,
       set: (name: string, value: string, options: CookieOptions) => {
-        // no-op in API handlers; Next will set headers from response if needed
+        store.set(name, value, options)
       },
       remove: (name: string, options: CookieOptions) => {
-        // no-op
+        store.set(name, '', { ...options, maxAge: 0 })
       },
     },
   })

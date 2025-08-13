@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
       limit,
     })
 
-    return NextResponse.json({ businesses })
+    return NextResponse.json({ 
+      success: true,
+      businesses 
+    })
   } catch (error) {
     console.error("Error fetching businesses:", error)
     return NextResponse.json({ error: "Failed to fetch businesses" }, { status: 500 })

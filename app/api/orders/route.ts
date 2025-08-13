@@ -4,6 +4,55 @@ import { createServerClientForApi } from "@/lib/supabase-api"
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
 
+export async function GET(request: NextRequest) {
+  const supabase = createServerClientForApi()
+  try {
+    const { searchParams } = request.nextUrl
+    const customerId = searchParams.get("customer_id")
+
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Build query
+    let query = supabase
+      .from("orders")
+      .select(`
+        *,
+        businesses(business_name, slug),
+        order_items(item_name, quantity, item_price)
+      `)
+
+    // Filter by customer if specified
+    if (customerId) {
+      query = query.eq("customer_id", customerId)
+    } else {
+      // If no customer_id specified, only return orders for the authenticated user
+      query = query.eq("customer_id", user.id)
+    }
+
+    const { data: orders, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+
+    return NextResponse.json({ 
+      success: true,
+      orders 
+    })
+  } catch (error) {
+    console.error("Error fetching orders:", error)
+    return NextResponse.json({ 
+      success: false,
+      error: "Failed to fetch orders",
+      orders: []
+    }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createServerClientForApi()
   try {

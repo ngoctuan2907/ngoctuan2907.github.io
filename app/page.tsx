@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
+import { AdTicker } from "@/components/ui/ad-ticker";
 
 export default function HomePage() {
   const { user, userProfile, signOut } = useAuth();
@@ -42,16 +43,104 @@ export default function HomePage() {
     customers: "15K+", 
     orders: "50K+"
   });
+  const [featuredCafes, setFeaturedCafes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch dynamic stats on component mount
+  // Fetch dynamic stats and featured cafes on component mount
   useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => setDynamicStats(data))
-      .catch(err => {
-        console.error('Failed to fetch stats:', err)
-        // Keep default values on error
-      })
+    const fetchData = async () => {
+      try {
+        // Fetch stats
+        const statsRes = await fetch('/api/stats');
+        const statsData = await statsRes.json();
+        setDynamicStats(statsData);
+
+        // Fetch featured businesses
+        const businessRes = await fetch('/api/businesses?limit=4');
+        const businessData = await businessRes.json();
+        
+        if (businessData.success && businessData.businesses) {
+          // Transform API data to match the expected format
+          const transformedCafes = businessData.businesses.map((business: any) => ({
+            id: business.id,
+            name: business.business_name,
+            cuisine: business.business_cuisines?.[0]?.cuisine_types?.name || 'Various',
+            location: business.district,
+            rating: business.reviews?.length > 0 
+              ? (business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / business.reviews.length).toFixed(1)
+              : 4.5,
+            reviews: business.reviews?.length || 0,
+            image: business.cover_image_url || "/placeholder.svg?height=200&width=300",
+            specialty: business.specialty || business.description?.substring(0, 30) + '...' || 'Delicious Food',
+            priceRange: business.price_range || '$$',
+            isOpen: business.status === 'active',
+            slug: business.slug
+          }));
+          setFeaturedCafes(transformedCafes);
+        }
+      } catch (err) {
+        console.error('Failed to fetch data:', err);
+        // Keep default mock data on error
+        setFeaturedCafes([
+          {
+            id: 1,
+            name: "Ah Ma's Kitchen",
+            cuisine: "Peranakan",
+            location: "Toa Payoh",
+            rating: 4.8,
+            reviews: 124,
+            image: "/placeholder.svg?height=200&width=300",
+            specialty: "Authentic Nyonya Kueh",
+            priceRange: "$$",
+            isOpen: true,
+            slug: "ah-mas-kitchen"
+          },
+          {
+            id: 2,
+            name: "Brew & Bite",
+            cuisine: "Western Fusion",
+            location: "Tampines",
+            rating: 4.6,
+            reviews: 89,
+            image: "/placeholder.svg?height=200&width=300",
+            specialty: "Artisan Coffee & Brunch",
+            priceRange: "$$$",
+            isOpen: true,
+            slug: "brew-and-bite"
+          },
+          {
+            id: 3,
+            name: "Spice Route Home",
+            cuisine: "Indian",
+            location: "Jurong West",
+            rating: 4.9,
+            reviews: 156,
+            image: "/placeholder.svg?height=200&width=300",
+            specialty: "Homestyle Curries",
+            priceRange: "$",
+            isOpen: false,
+            slug: "spice-route-home"
+          },
+          {
+            id: 4,
+            name: "Noodle Nest",
+            cuisine: "Chinese",
+            location: "Ang Mo Kio",
+            rating: 4.7,
+            reviews: 203,
+            image: "/placeholder.svg?height=200&width=300",
+            specialty: "Hand-pulled Noodles",
+            priceRange: "$$",
+            isOpen: true,
+            slug: "noodle-nest"
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [])
 
   // Helper function to get user initials for avatar
@@ -90,57 +179,6 @@ export default function HomePage() {
     }
   }
 
-  const featuredCafes = [
-    {
-      id: 1,
-      name: "Ah Ma's Kitchen",
-      cuisine: "Peranakan",
-      location: "Toa Payoh",
-      rating: 4.8,
-      reviews: 124,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Authentic Nyonya Kueh",
-      priceRange: "$$",
-      isOpen: true,
-    },
-    {
-      id: 2,
-      name: "Brew & Bite",
-      cuisine: "Western Fusion",
-      location: "Tampines",
-      rating: 4.6,
-      reviews: 89,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Artisan Coffee & Brunch",
-      priceRange: "$$$",
-      isOpen: true,
-    },
-    {
-      id: 3,
-      name: "Spice Route Home",
-      cuisine: "Indian",
-      location: "Jurong West",
-      rating: 4.9,
-      reviews: 156,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Homestyle Curries",
-      priceRange: "$",
-      isOpen: false,
-    },
-    {
-      id: 4,
-      name: "Noodle Nest",
-      cuisine: "Chinese",
-      location: "Ang Mo Kio",
-      rating: 4.7,
-      reviews: 203,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Hand-pulled Noodles",
-      priceRange: "$$",
-      isOpen: true,
-    },
-  ];
-
   const categories = [
     { name: "Local", icon: "🇸🇬", count: 45 },
     { name: "Western", icon: "🍔", count: 32 },
@@ -158,6 +196,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Ad Ticker */}
+      <AdTicker />
+      
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -355,55 +396,71 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredCafes.map((cafe) => (
-              <Link key={cafe.id} href={`/cafe/${cafe.id}`}>
-                <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-                  <div className="relative">
-                    <Image
-                      src={cafe.image || "/placeholder.svg"}
-                      alt={cafe.name}
-                      width={300}
-                      height={200}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-3 right-3">
-                      <Badge
-                        variant={cafe.isOpen ? "default" : "secondary"}
-                        className="bg-white/90 text-gray-900"
-                      >
-                        {cafe.isOpen ? "Open" : "Closed"}
-                      </Badge>
-                    </div>
-                  </div>
+            {isLoading ? (
+              // Loading skeleton
+              Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="overflow-hidden">
+                  <div className="h-48 bg-gray-200 animate-pulse"></div>
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                        {cafe.name}
-                      </h3>
-                      <span className="text-sm text-gray-500">
-                        {cafe.priceRange}
-                      </span>
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
                     </div>
-                    <p className="text-sm text-orange-600 mb-2">
-                      {cafe.specialty}
-                    </p>
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {cafe.location}
-                      </div>
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 mr-1 fill-yellow-400 text-yellow-400" />
-                        {cafe.rating} ({cafe.reviews})
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="mt-2 text-xs">
-                      {cafe.cuisine}
-                    </Badge>
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
+              ))
+            ) : (
+              featuredCafes.map((cafe) => (
+                <Link key={cafe.id} href={`/cafe/${cafe.slug || cafe.id}`}>
+                  <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
+                    <div className="relative">
+                      <Image
+                        src={cafe.image || "/placeholder.svg"}
+                        alt={cafe.name}
+                        width={300}
+                        height={200}
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-3 right-3">
+                        <Badge
+                          variant={cafe.isOpen ? "default" : "secondary"}
+                          className="bg-white/90 text-gray-900"
+                        >
+                          {cafe.isOpen ? "Open" : "Closed"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                          {cafe.name}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          {cafe.priceRange}
+                        </span>
+                      </div>
+                      <p className="text-sm text-orange-600 mb-2">
+                        {cafe.specialty}
+                      </p>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          {cafe.location}
+                        </div>
+                        <div className="flex items-center">
+                          <Star className="w-4 h-4 mr-1 fill-yellow-400 text-yellow-400" />
+                          {cafe.rating} ({cafe.reviews})
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="mt-2 text-xs">
+                        {cafe.cuisine}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>
