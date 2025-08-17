@@ -26,18 +26,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   const refreshUser = async () => {
+    console.log('DEBUG: AuthContext - refreshUser called')
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('DEBUG: AuthContext - got user:', user)
       setUser(user)
       
       if (user) {
         try {
+          console.log('DEBUG: AuthContext - fetching profile for user:', user.id)
           const { data: profile, error } = await supabase
             .from("user_profiles")
             .select("*")
             .eq("user_id", user.id)
             .maybeSingle()
 
+          console.log('DEBUG: AuthContext - profile result:', { profile, error })
           if (error) {
             console.error("Error fetching user profile:", error)
             
@@ -63,15 +67,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error refreshing user:", error)
     } finally {
+      console.log('DEBUG: AuthContext - setting loading to false')
       setLoading(false)
     }
   }
 
 useEffect(() => {
+  console.log('DEBUG: AuthContext useEffect called')
   refreshUser()
+
+  // Add a safety timeout to prevent infinite loading
+  const timeout = setTimeout(() => {
+    console.log('DEBUG: AuthContext timeout - forcing loading to false')
+    setLoading(false)
+  }, 5000)
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
     async (event: any, session: any) => {
+      console.log('DEBUG: AuthContext onAuthStateChange:', event, session?.user?.email)
       setLoading(true)
       setUser(session?.user ?? null)
 
@@ -97,11 +110,15 @@ useEffect(() => {
         setUserProfile(null)
       }
 
+      console.log('DEBUG: AuthContext onAuthStateChange setting loading to false')
       setLoading(false)
     }
   )
 
-  return () => subscription.unsubscribe()
+  return () => {
+    clearTimeout(timeout)
+    subscription.unsubscribe()
+  }
 }, []) // Empty dependency array - supabase client is created once
 
   const signOut = async () => {

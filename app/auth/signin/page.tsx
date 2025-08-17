@@ -16,6 +16,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react"
 import { signInSchema, type SignInFormData } from "@/lib/auth-schemas"
 import { createClient } from "@/lib/supabaseClient" 
 import { useSearchParams } from "next/navigation"
+import OAuthButtons from "@/components/auth/OAuthButtons"
 
 export default function SignInPage() {
   const router = useRouter()
@@ -159,6 +160,9 @@ export default function SignInPage() {
                 )}
               </Button>
             </form>
+            
+            <OAuthButtons mode="signin" className="mt-6" />
+            
             <div className="text-center mt-6 pt-4 border-t">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}

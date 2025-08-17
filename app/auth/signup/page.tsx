@@ -18,6 +18,7 @@ import {
   type CustomerSignUpData, 
   type BusinessOwnerSignUpData 
 } from "@/lib/auth-schemas"
+import OAuthButtons from "@/components/auth/OAuthButtons"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -302,6 +303,8 @@ export default function SignUpPage() {
                 )}
               </Button>
             </form>
+
+            <OAuthButtons mode="signup" className="mt-6" />
 
             <div className="text-center mt-6 pt-4 border-t">
               <p className="text-sm text-gray-600">
