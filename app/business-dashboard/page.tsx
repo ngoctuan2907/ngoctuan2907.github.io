@@ -1,31 +1,136 @@
 "use client"
 
-import { useState } from "react"
-import { BarChart3, Users, Star, TrendingUp, Edit, Eye, MessageSquare, Calendar, DollarSign } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { BarChart3, Users, Star, TrendingUp, Edit, Eye, MessageSquare, Calendar, DollarSign, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from '@/lib/auth-context'
+import { useToast } from "@/components/ui/use-toast"
 
 export default function BusinessDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
+  const [businessData, setBusinessData] = useState<any>(null)
+  const [dataLoading, setDataLoading] = useState(true)
+  const { user, userProfile, loading: authLoading } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
 
-  const businessData = {
-    name: "Ah Ma's Kitchen",
-    status: "Active",
-    rating: 4.8,
-    totalReviews: 124,
-    totalViews: 2847,
-    totalOrders: 89,
-    monthlyRevenue: 3240,
-    profileViews: [
-      { month: "Jan", views: 245 },
-      { month: "Feb", views: 312 },
-      { month: "Mar", views: 428 },
-      { month: "Apr", views: 389 },
-      { month: "May", views: 467 },
-      { month: "Jun", views: 523 },
-    ],
+  // Fetch business data
+  useEffect(() => {
+    const fetchBusinessData = async () => {
+      if (!user) return
+
+      try {
+        const businessResponse = await fetch('/api/businesses')
+        if (businessResponse.ok) {
+          const data = await businessResponse.json()
+          if (data.businesses && data.businesses.length > 0) {
+            setBusinessData(data.businesses[0]) // Use the first business
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch business data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    fetchBusinessData()
+  }, [user])
+
+  const handleUpdateMenu = () => {
+    // Navigate to menu management page
+    router.push('/business-dashboard/menu')
+  }
+
+  const handleSetHours = () => {
+    // Navigate to business hours management page
+    router.push('/business-dashboard/hours')
+  }
+
+  const handleReplyToReviews = () => {
+    // Navigate to reviews management page
+    router.push('/business-dashboard/reviews')
+  }
+
+    const handleViewAnalytics = () => {
+    // Navigate to analytics page
+    router.push('/business-dashboard/analytics')
+  }
+
+    const handleViewPublicProfile = () => {
+    // Navigate to public profile if business has a slug
+    if (businessInfo.slug) {
+      window.open(`/cafe/${businessInfo.slug}`, '_blank')
+    } else {
+      toast({
+        title: "Public Profile Not Available",
+        description: "Complete your business setup to view your public profile.",
+      })
+    }
+  }
+
+  const handleEditProfile = () => {
+    toast({
+      title: "Edit Profile",
+      description: "Business profile editing feature coming soon!",
+    })
+    // TODO: Navigate to business profile edit page
+    // router.push('/business-dashboard/edit-profile')
+  }
+
+  // Don't redirect during auth loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    router.push('/auth/signin')
+    return null
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const businessInfo = businessData || {
+    business_name: "Your Business",
+    status: "pending",
+    slug: null,
+    totalViews: 0,
+    totalOrders: 0,
+    rating: 0,
+    totalReviews: 0,
+    monthlyRevenue: 0
   }
 
   const recentReviews = [
@@ -112,7 +217,7 @@ export default function BusinessDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Profile Views</p>
-                    <p className="text-2xl font-bold text-gray-900">{businessData.totalViews.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-gray-900">{businessInfo.totalViews?.toLocaleString() || '0'}</p>
                     <p className="text-sm text-green-600">+12% from last month</p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -127,7 +232,7 @@ export default function BusinessDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Total Orders</p>
-                    <p className="text-2xl font-bold text-gray-900">{businessData.totalOrders}</p>
+                    <p className="text-2xl font-bold text-gray-900">{businessInfo.totalOrders || 0}</p>
                     <p className="text-sm text-green-600">+8% from last month</p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -142,8 +247,8 @@ export default function BusinessDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Average Rating</p>
-                    <p className="text-2xl font-bold text-gray-900">{businessData.rating}</p>
-                    <p className="text-sm text-gray-600">{businessData.totalReviews} reviews</p>
+                    <p className="text-2xl font-bold text-gray-900">{businessInfo.rating || 0}</p>
+                    <p className="text-sm text-gray-600">{businessInfo.totalReviews || 0} reviews</p>
                   </div>
                   <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
                     <Star className="w-6 h-6 text-yellow-600" />
@@ -157,7 +262,7 @@ export default function BusinessDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Monthly Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900">${businessData.monthlyRevenue}</p>
+                    <p className="text-2xl font-bold text-gray-900">${businessInfo.monthlyRevenue || 0}</p>
                     <p className="text-sm text-green-600">+15% from last month</p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">

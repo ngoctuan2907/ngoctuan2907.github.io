@@ -11,7 +11,6 @@ REVOKE SELECT ON businesses FROM authenticated;
 REVOKE SELECT ON reviews FROM authenticated;
 REVOKE SELECT ON orders FROM authenticated;
 REVOKE SELECT ON business_views FROM authenticated;
-
 -- Keep these grants that are intentional:
 -- - cuisine_types: reference data, no RLS
 -- - business_views: INSERT needed for analytics tracking

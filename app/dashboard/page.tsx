@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,12 +25,55 @@ import Link from "next/link"
 export default function DashboardPage() {
   const { user, userProfile, loading } = useAuth()
   const router = useRouter()
+  const [orders, setOrders] = useState<any[]>([])
+  const [favorites, setFavorites] = useState<any[]>([])
+  const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth/signin")
     }
   }, [user, loading, router])
+
+  // Fetch user orders and favorites
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return
+      
+      setLoadingData(true)
+      try {
+        // Fetch orders and favorites in parallel
+        const [ordersResponse, favoritesResponse] = await Promise.all([
+          fetch('/api/orders'),
+          fetch('/api/favorites')
+        ])
+
+        // Handle orders
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json()
+          if (ordersData.success) {
+            setOrders(ordersData.orders || [])
+          }
+        }
+
+        // Handle favorites  
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json()
+          if (favoritesData.success) {
+            setFavorites(favoritesData.favorites || [])
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error)
+      } finally {
+        setLoadingData(false)
+      }
+    }
+
+    if (user) {
+      fetchUserData()
+    }
+  }, [user])
 
   if (loading) {
     return (
@@ -118,7 +161,12 @@ export default function DashboardPage() {
         {isBusinessOwner ? (
           <BusinessOwnerDashboard userProfile={userProfile} isEmailVerified={isEmailVerified} />
         ) : (
-          <CustomerDashboard userProfile={userProfile} />
+          <CustomerDashboard 
+            userProfile={userProfile} 
+            orders={orders}
+            favorites={favorites}
+            loadingData={loadingData}
+          />
         )}
       </div>
     </div>
@@ -129,6 +177,30 @@ function BusinessOwnerDashboard({ userProfile, isEmailVerified }: {
   userProfile: any, 
   isEmailVerified: boolean 
 }) {
+  const [businesses, setBusinesses] = useState<any[]>([])
+  const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(true)
+
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      try {
+        const response = await fetch('/api/businesses')
+        const data = await response.json()
+        
+        if (data.success && data.businesses) {
+          setBusinesses(data.businesses)
+        }
+      } catch (error) {
+        console.error('Failed to fetch businesses:', error)
+      } finally {
+        setIsLoadingBusinesses(false)
+      }
+    }
+
+    fetchBusinesses()
+  }, [])
+
+  const hasBusinesses = businesses.length > 0
+
   return (
     <div className="space-y-6">
       {/* Quick Actions */}
@@ -137,8 +209,12 @@ function BusinessOwnerDashboard({ userProfile, isEmailVerified }: {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-800">List Your Cafe</p>
-                <p className="text-xs text-orange-600">Get started now</p>
+                <p className="text-sm font-medium text-orange-800">
+                  {hasBusinesses ? "Manage Business" : "List Your Cafe"}
+                </p>
+                <p className="text-xs text-orange-600">
+                  {hasBusinesses ? "Go to dashboard" : "Get started now"}
+                </p>
               </div>
               <Coffee className="w-8 h-8 text-orange-600" />
             </div>
@@ -148,9 +224,9 @@ function BusinessOwnerDashboard({ userProfile, isEmailVerified }: {
               disabled={!isEmailVerified}
               asChild
             >
-              <Link href="/register-business">
+              <Link href={hasBusinesses ? "/business-dashboard" : "/register-business"}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Business
+                {hasBusinesses ? "Business Dashboard" : "Create Business"}
               </Link>
             </Button>
           </CardContent>
@@ -207,58 +283,107 @@ function BusinessOwnerDashboard({ userProfile, isEmailVerified }: {
         </Card>
       </div>
 
-      {/* Business Setup Guide */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Coffee className="w-5 h-5 mr-2 text-orange-600" />
-            Get Started with Your Business
-          </CardTitle>
-          <CardDescription>
-            Follow these steps to set up your home-based cafe on SG Home Eats
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              {isEmailVerified ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-              )}
-              <span className={isEmailVerified ? "line-through text-gray-500" : "text-gray-900"}>
-                Verify your email address
-              </span>
+      {/* Existing Businesses */}
+      {!isLoadingBusinesses && hasBusinesses && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Coffee className="w-5 h-5 mr-2 text-orange-600" />
+              Your Businesses ({businesses.length})
+            </CardTitle>
+            <CardDescription>
+              Manage your registered businesses
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {businesses.map((business) => (
+                <div key={business.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{business.business_name}</h4>
+                    <p className="text-sm text-gray-600">{business.district} • {business.price_range}</p>
+                    <Badge 
+                      variant={business.status === 'active' ? 'default' : 'secondary'}
+                      className="mt-1"
+                    >
+                      {business.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/cafe/${business.slug || business.id}`}>
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        View
+                      </Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link href="/business-dashboard">
+                        <Settings className="w-4 h-4 mr-1" />
+                        Manage
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-              <span className="text-gray-900">Create your business profile</span>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-              <span className="text-gray-900">Add your menu items</span>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-              <span className="text-gray-900">Go live and start receiving orders</span>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {isEmailVerified && (
-            <div className="mt-6 pt-4 border-t">
-              <Button className="bg-orange-600 hover:bg-orange-700" asChild>
-                <Link href="/register-business">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Start Creating Your Business Profile
-                </Link>
-              </Button>
+      {/* Business Setup Guide */}
+      {!hasBusinesses && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Coffee className="w-5 h-5 mr-2 text-orange-600" />
+              Get Started with Your Business
+            </CardTitle>
+            <CardDescription>
+              Follow these steps to set up your home-based cafe on SG Home Eats
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                {isEmailVerified ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                )}
+                <span className={isEmailVerified ? "line-through text-gray-500" : "text-gray-900"}>
+                  Verify your email address
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                <span className="text-gray-900">Create your business profile</span>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                <span className="text-gray-900">Add your menu items</span>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                <span className="text-gray-900">Go live and start receiving orders</span>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {isEmailVerified && (
+              <div className="mt-6 pt-4 border-t">
+                <Button className="bg-orange-600 hover:bg-orange-700" asChild>
+                  <Link href="/register-business">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Start Creating Your Business Profile
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Intended Business Name */}
       {userProfile.intended_business_name && (
@@ -280,7 +405,17 @@ function BusinessOwnerDashboard({ userProfile, isEmailVerified }: {
   )
 }
 
-function CustomerDashboard({ userProfile }: { userProfile: any }) {
+function CustomerDashboard({ 
+  userProfile, 
+  orders, 
+  favorites, 
+  loadingData 
+}: { 
+  userProfile: any,
+  orders: any[],
+  favorites: any[],
+  loadingData: boolean
+}) {
   return (
     <div className="space-y-6">
       {/* Quick Actions */}
@@ -308,13 +443,17 @@ function CustomerDashboard({ userProfile }: { userProfile: any }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-900">My Orders</p>
-                <p className="text-xs text-gray-600">Order history</p>
+                <p className="text-xs text-gray-600">
+                  {loadingData ? "Loading..." : orders.length === 0 ? "No orders yet" : `${orders.length} order${orders.length === 1 ? '' : 's'}`}
+                </p>
               </div>
               <Clock className="w-8 h-8 text-green-600" />
             </div>
-            <Button variant="outline" className="w-full mt-3" size="sm" disabled>
-              <Clock className="w-4 h-4 mr-2" />
-              Coming Soon
+            <Button variant="outline" className="w-full mt-3" size="sm" asChild>
+              <Link href="/orders">
+                <Clock className="w-4 h-4 mr-2" />
+                View Orders
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -324,13 +463,17 @@ function CustomerDashboard({ userProfile }: { userProfile: any }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-900">Favorites</p>
-                <p className="text-xs text-gray-600">Saved cafes</p>
+                <p className="text-xs text-gray-600">
+                  {loadingData ? "Loading..." : favorites.length === 0 ? "No favorites yet" : `${favorites.length} saved cafe${favorites.length === 1 ? '' : 's'}`}
+                </p>
               </div>
               <Star className="w-8 h-8 text-yellow-600" />
             </div>
-            <Button variant="outline" className="w-full mt-3" size="sm" disabled>
-              <Star className="w-4 h-4 mr-2" />
-              Coming Soon
+            <Button variant="outline" className="w-full mt-3" size="sm" asChild>
+              <Link href="/browse">
+                <Star className="w-4 h-4 mr-2" />
+                Browse Cafes
+              </Link>
             </Button>
           </CardContent>
         </Card>

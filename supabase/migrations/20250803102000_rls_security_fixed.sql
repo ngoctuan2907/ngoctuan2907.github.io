@@ -17,9 +17,7 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 COMMENT ON FUNCTION update_updated_at_column() IS 'Securely updates the updated_at timestamp with fixed search_path';
-
 -- ============================================================================
 -- 2. Create helper functions for common checks (before policies)
 -- ============================================================================
@@ -34,7 +32,6 @@ BEGIN
     RETURN (SELECT user_type FROM user_profiles WHERE user_id = auth.uid()) = 'admin';
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION public.is_business_owner()
 RETURNS BOOLEAN
 SECURITY DEFINER
@@ -45,7 +42,6 @@ BEGIN
     RETURN (SELECT user_type FROM user_profiles WHERE user_id = auth.uid()) = 'business_owner';
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION public.owns_business(business_id UUID)
 RETURNS BOOLEAN
 SECURITY DEFINER
@@ -59,11 +55,9 @@ BEGIN
     );
 END;
 $$;
-
 COMMENT ON FUNCTION public.is_admin() IS 'Check if current user is admin';
 COMMENT ON FUNCTION public.is_business_owner() IS 'Check if current user is business owner';
 COMMENT ON FUNCTION public.owns_business(UUID) IS 'Check if current user owns specific business';
-
 -- ============================================================================
 -- 3. Enable Row Level Security (RLS) on all tables (if not already)
 -- ============================================================================
@@ -80,7 +74,6 @@ ALTER TABLE reviews        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_views ENABLE ROW LEVEL SECURITY;
-
 -- ============================================================================
 -- 4. RLS Policies for user_profiles (idempotent)
 -- ============================================================================
@@ -132,7 +125,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 5. RLS Policies for businesses
 -- ============================================================================
@@ -219,13 +211,11 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 6. cuisine_types reference data (no RLS)
 -- ============================================================================
 
 ALTER TABLE cuisine_types DISABLE ROW LEVEL SECURITY;
-
 -- ============================================================================
 -- 7. RLS Policies for business_cuisines
 -- ============================================================================
@@ -282,7 +272,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 8. RLS Policies for business_hours
 -- ============================================================================
@@ -346,7 +335,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 9. RLS Policies for menu_categories
 -- ============================================================================
@@ -414,7 +402,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 10. RLS Policies for menu_items
 -- ============================================================================
@@ -483,7 +470,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 11. RLS Policies for business_images
 -- ============================================================================
@@ -551,7 +537,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 12. RLS Policies for reviews
 -- ============================================================================
@@ -649,7 +634,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 13. RLS Policies for orders
 -- ============================================================================
@@ -718,7 +702,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 14. RLS Policies for order_items
 -- ============================================================================
@@ -785,7 +768,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 15. RLS Policies for business_views (analytics)
 -- ============================================================================
@@ -831,7 +813,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- ============================================================================
 -- 16. Grant necessary permissions - MINIMAL AND CLEAN
 -- ============================================================================
@@ -839,7 +820,6 @@ $$;
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT ON cuisine_types TO authenticated;
 GRANT INSERT ON business_views TO authenticated, anon;
-
 -- ============================================================================
 -- 17. Comments for documentation
 -- ============================================================================
@@ -850,7 +830,6 @@ COMMENT ON TABLE reviews IS 'Reviews with RLS - public read published, customers
 COMMENT ON TABLE orders IS 'Orders with RLS - customers and business owners see relevant orders only';
 COMMENT ON TABLE business_views IS 'Analytics with RLS - business owners see their own data only';
 COMMENT ON TABLE cuisine_types IS 'Reference data - no RLS, public read access';
-
 -- ============================================================================
 -- Migration complete
 -- ============================================================================

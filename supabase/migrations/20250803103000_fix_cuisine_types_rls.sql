@@ -5,7 +5,6 @@
 
 -- Explicitly disable RLS on cuisine_types as it's reference data
 ALTER TABLE cuisine_types DISABLE ROW LEVEL SECURITY;
-
 -- Drop any existing policies on cuisine_types (if any exist)
 DO $$
 DECLARE
@@ -21,11 +20,9 @@ BEGIN
         RAISE NOTICE 'Dropped policy: %', policy_name;
     END LOOP;
 END $$;
-
 -- Ensure authenticated users can read cuisine_types
 GRANT SELECT ON cuisine_types TO authenticated;
 GRANT SELECT ON cuisine_types TO anon;
-
 -- Verify the change
 DO $$
 DECLARE
@@ -43,5 +40,4 @@ BEGIN
         RAISE NOTICE '⚠️  RLS is still enabled on cuisine_types';
     END IF;
 END $$;
-
 COMMENT ON TABLE cuisine_types IS 'Reference data table - RLS disabled for public access';

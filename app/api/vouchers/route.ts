@@ -114,16 +114,19 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClientForApi()
     
+    // Check if user is authenticated for this endpoint
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
     const { searchParams } = request.nextUrl
     const shopId = searchParams.get("shop_id")
     const activeOnly = searchParams.get("active") === "true"
 
     let query = supabase
       .from('vouchers')
-      .select(`
-        *,
-        businesses(business_name, slug, is_active)
-      `)
+      .select('*')
 
     if (shopId) {
       query = query.eq('shop_id', shopId)

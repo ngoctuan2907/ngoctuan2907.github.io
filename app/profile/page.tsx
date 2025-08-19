@@ -77,15 +77,34 @@ export default function ProfilePage() {
     setIsLoading(true)
 
     try {
-      // Here you would typically call an API to update the user profile
-      // For now, we'll just show a success message
-      toast({
-        title: "Profile updated!",
-        description: "Your profile has been updated successfully.",
+      const response = await fetch('/api/account/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: data.firstName,
+          last_name: data.lastName,
+          phone: data.phone,
+          intended_business_name: data.intendedBusinessName,
+        }),
       })
-      
-      await refreshUser()
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast({
+          title: "Profile updated!",
+          description: result.message || "Your profile has been updated successfully.",
+        })
+        
+        // Refresh user data from context
+        await refreshUser()
+      } else {
+        throw new Error(result.error || 'Failed to update profile')
+      }
     } catch (error: any) {
+      console.error('Profile update error:', error)
       toast({
         title: "Error",
         description: error.message || "Failed to update profile. Please try again.",

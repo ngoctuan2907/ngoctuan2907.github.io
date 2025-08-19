@@ -4,9 +4,7 @@ DROP TRIGGER IF EXISTS update_businesses_updated_at ON businesses;
 DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
 DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
 DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
-
-DROP FUNCTION IF EXISTS update_updated_at_column();
-
+DROP FUNCTION IF EXISTS update_updated_at_column;
 -- Drop all existing tables in reverse dependency order
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
@@ -20,8 +18,6 @@ DROP TABLE IF EXISTS cuisine_types CASCADE;
 DROP TABLE IF EXISTS business_views CASCADE;
 DROP TABLE IF EXISTS businesses CASCADE;
 DROP TABLE IF EXISTS user_profiles CASCADE;
-
-
 -- Create the main database tables for the Singapore cafe marketplace
 
 -- User profiles table (extends Supabase auth.users)
@@ -37,7 +33,6 @@ CREATE TABLE user_profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id)
 );
-
 -- Business profiles table
 CREATE TABLE businesses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -60,20 +55,17 @@ CREATE TABLE businesses (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Business cuisine types (many-to-many relationship)
 CREATE TABLE cuisine_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 CREATE TABLE business_cuisines (
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     cuisine_id UUID NOT NULL REFERENCES cuisine_types(id) ON DELETE CASCADE,
     PRIMARY KEY (business_id, cuisine_id)
 );
-
 -- Business operating hours
 CREATE TABLE business_hours (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -84,7 +76,6 @@ CREATE TABLE business_hours (
     close_time TIME,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Menu categories
 CREATE TABLE menu_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -93,7 +84,6 @@ CREATE TABLE menu_categories (
     display_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Menu items
 CREATE TABLE menu_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -108,7 +98,6 @@ CREATE TABLE menu_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Business images/gallery
 CREATE TABLE business_images (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,7 +108,6 @@ CREATE TABLE business_images (
     display_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Reviews and ratings
 CREATE TABLE reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -132,7 +120,6 @@ CREATE TABLE reviews (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(business_id, customer_id) -- One review per customer per business
 );
-
 -- Orders table
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -149,7 +136,6 @@ CREATE TABLE orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Order items
 CREATE TABLE order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -161,7 +147,6 @@ CREATE TABLE order_items (
     subtotal DECIMAL(10,2) NOT NULL,
     special_instructions TEXT
 );
-
 -- Business analytics/stats
 CREATE TABLE business_views (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -170,7 +155,6 @@ CREATE TABLE business_views (
     user_agent TEXT,
     viewed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Create indexes for better performance
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
 CREATE INDEX idx_businesses_status ON businesses(status);
@@ -184,7 +168,6 @@ CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_business_views_business_id ON business_views(business_id);
 CREATE INDEX idx_business_views_viewed_at ON business_views(viewed_at);
-
 -- Create a function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -193,7 +176,6 @@ BEGIN
     RETURN NEW;
 END;
 $$ language 'plpgsql';
-
 -- Create triggers to automatically update updated_at
 CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_businesses_updated_at BEFORE UPDATE ON businesses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

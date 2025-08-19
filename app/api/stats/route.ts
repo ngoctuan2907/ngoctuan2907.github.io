@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerClientForApi } from "@/lib/supabase-api"
 
+// Force dynamic rendering to avoid 404 caching
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     console.log("📊 [VERCEL LOG] Stats API called at:", new Date().toISOString())

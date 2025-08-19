@@ -18,7 +18,6 @@ BEGIN
     );
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION public.is_business_owner()
 RETURNS BOOLEAN
 SECURITY DEFINER
@@ -32,7 +31,6 @@ BEGIN
     );
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION public.owns_business(business_id UUID)
 RETURNS BOOLEAN
 SECURITY DEFINER
@@ -46,7 +44,6 @@ BEGIN
     );
 END;
 $$;
-
 -- 1. Fix the function search path vulnerability by replacing it in-place
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER
@@ -59,9 +56,7 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 COMMENT ON FUNCTION update_updated_at_column() IS 'Securely updates the updated_at timestamp with fixed search_path';
-
 -- 2. Enable Row Level Security (RLS) on all relevant tables
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
@@ -75,7 +70,6 @@ ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_views ENABLE ROW LEVEL SECURITY;
-
 -- 3. Policies for user_profiles
 DO $$
 BEGIN
@@ -91,7 +85,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -106,7 +99,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -121,7 +113,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -136,7 +127,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 4. Policies for businesses
 DO $$
 BEGIN
@@ -152,7 +142,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -167,7 +156,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -188,7 +176,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -203,7 +190,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -218,7 +204,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 5. Reference data: cuisine_types
 DO $$
 BEGIN
@@ -234,7 +219,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -249,7 +233,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 6. business_cuisines
 DO $$
 BEGIN
@@ -270,7 +253,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -290,7 +272,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 7. business_hours
 DO $$
 BEGIN
@@ -311,7 +292,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -331,7 +311,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 8. menu_categories
 DO $$
 BEGIN
@@ -352,7 +331,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -372,7 +350,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 9. menu_items
 DO $$
 BEGIN
@@ -395,7 +372,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -416,7 +392,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -437,7 +412,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -458,7 +432,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -479,7 +452,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 10. business_images
 DO $$
 BEGIN
@@ -500,7 +472,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -520,7 +491,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 11. reviews
 DO $$
 BEGIN
@@ -542,7 +512,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -557,7 +526,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -582,7 +550,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -597,7 +564,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -617,7 +583,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -632,7 +597,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 12. orders
 DO $$
 BEGIN
@@ -648,7 +612,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -669,7 +632,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -689,7 +651,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -709,7 +670,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -724,7 +684,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 13. order_items
 DO $$
 BEGIN
@@ -745,7 +704,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -765,7 +723,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -786,7 +743,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -801,7 +757,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 14. business_views (analytics)
 DO $$
 BEGIN
@@ -822,7 +777,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -842,7 +796,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -857,7 +810,6 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- 15. Grants for authenticated / anon users
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT ON cuisine_types TO authenticated;
@@ -873,14 +825,12 @@ GRANT SELECT, INSERT ON orders TO authenticated;
 GRANT SELECT, INSERT ON order_items TO authenticated;
 GRANT INSERT ON business_views TO authenticated, anon;
 GRANT SELECT ON business_views TO authenticated;
-
 -- 16. Comments for documentation
 COMMENT ON TABLE user_profiles IS 'User profiles with RLS - users can only access their own data';
 COMMENT ON TABLE businesses IS 'Business profiles with RLS - public read for active, owners manage their own';
 COMMENT ON TABLE reviews IS 'Reviews with RLS - public read published, customers manage their own';
 COMMENT ON TABLE orders IS 'Orders with RLS - customers and business owners see relevant orders only';
 COMMENT ON TABLE business_views IS 'Analytics with RLS - business owners see their own data only';
-
 -- Migration complete
 DO $$
 BEGIN

@@ -1,8 +1,9 @@
 "use client"
 
-import { ArrowLeft, MapPin, Clock, Phone, Mail, Instagram, Star, Heart, Share2, MessageSquare, Map, Navigation, Plus, Minus, ShoppingCart, X } from "lucide-react"
+import { ArrowLeft, MapPin, Clock, Phone, Mail, Instagram, Star, Heart, Share2, MessageSquare, Map, Navigation, Plus, Minus, ShoppingCart, X, Coffee } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabaseClient"
 
 export default function CafeProfilePage({ params }: { params: { id: string } }) {
+  const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
   const [isSaved, setIsSaved] = useState(false)
@@ -26,6 +28,9 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
   const [reviewRating, setReviewRating] = useState(5)
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
   const [nearestLocations, setNearestLocations] = useState<any[]>([])
+  const [cafe, setCafe] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   // Cart state
   const [cart, setCart] = useState<any[]>([])
@@ -40,48 +45,117 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
   })
   const [isProcessingOrder, setIsProcessingOrder] = useState(false)
 
-  // Mock data - in real app, this would be fetched based on params.id
-  const cafe = {
-    id: 1,
-    name: "Ah Ma's Kitchen",
-    owner: "Mrs. Lim",
-    cuisine: ["Peranakan", "Local"],
-    location: "Toa Payoh",
-    fullAddress: "Blk 123 Toa Payoh Lorong 1, #01-456, Singapore 310123",
-    rating: 4.8,
-    reviewCount: 124,
-    priceRange: "$$",
-    isOpen: true,
-    description:
-      "Welcome to Ah Ma's Kitchen, where traditional Peranakan recipes meet modern home dining. Started by Mrs. Lim in her HDB flat, we specialize in authentic Nyonya kueh and traditional dishes passed down through three generations. Every dish is prepared with love using family recipes and the freshest local ingredients.",
-    specialty: "Authentic Nyonya Kueh & Traditional Peranakan Dishes",
-    images: [
-      "/placeholder.svg?height=400&width=600",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-    ],
-    menu: [
-      {
-        category: "Signature Kueh",
+  useEffect(() => {
+    const fetchCafe = async () => {
+      try {
+        const response = await fetch(`/api/businesses/${params.id}`)
+        const data = await response.json()
+        
+        if (response.ok && data.success && data.business) {
+          // Transform API data to component format
+          const business = data.business
+          setCafe({
+            id: business.id,
+            name: business.business_name,
+            owner: business.owner_name || "Business Owner",
+            cuisine: business.business_cuisines?.map((bc: any) => bc.cuisine_types?.name).filter(Boolean) || ["Various"],
+            location: business.district,
+            fullAddress: business.full_address || `${business.district}, Singapore ${business.postal_code}`,
+            rating: business.reviews?.length > 0 
+              ? (business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / business.reviews.length).toFixed(1)
+              : 4.5,
+            reviewCount: business.reviews?.length || 0,
+            priceRange: business.price_range || "$$",
+            isOpen: business.status === 'active',
+            description: business.description || "A wonderful home-based cafe serving delicious meals.",
+            specialty: business.specialty || "Authentic home-cooked meals",
+            images: business.cover_image_url ? [business.cover_image_url] : ["/placeholder.svg?height=400&width=600"],
+            menu: business.menu_items ? transformMenuItems(business.menu_items) : [],
+            hours: transformBusinessHours(business.business_hours),
+            contact: {
+              phone: business.phone || "+65 1234 5678",
+              email: business.email || "contact@business.com",
+              instagram: business.instagram_handle || "@business_sg",
+              whatsapp: business.whatsapp_number || business.phone || "+65 1234 5678",
+            },
+            coordinates: {
+              lat: 1.3521, // Default Singapore coordinates
+              lng: 103.8198,
+            },
+            reviews: business.reviews || [],
+          })
+        } else {
+          throw new Error(data.error || 'Business not found')
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch business:', err)
+        setError(err.message || 'Failed to load business details')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCafe()
+  }, [params.id])
+
+  // Check if cafe is favorited when user and cafe are available
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!user || !cafe) return
+      
+      try {
+        const response = await fetch(`/api/favorites/${cafe.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setIsSaved(data.isFavorited)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error)
+      }
+    }
+
+    checkFavoriteStatus()
+  }, [user, cafe])
+
+  // Transform menu items from database format
+  const transformMenuItems = (menuItems: any[]) => {
+    if (!menuItems || menuItems.length === 0) {
+      return [{
+        category: 'Menu Items',
         items: [
-          { id: "kueh-lapis", name: "Kueh Lapis", price: 2.50, description: "Traditional 9-layer steamed cake" },
-          { id: "ondeh-ondeh", name: "Ondeh Ondeh", price: 1.80, description: "Pandan glutinous rice balls with gula melaka" },
-          { id: "kueh-salat", name: "Kueh Salat", price: 3.20, description: "Coconut custard on glutinous rice base" },
-          { id: "ang-ku-kueh", name: "Ang Ku Kueh", price: 2.00, description: "Red tortoise cake with sweet mung bean filling" },
-        ],
-      },
-      {
-        category: "Main Dishes",
-        items: [
-          { id: "ayam-buah-keluak", name: "Ayam Buah Keluak", price: 15.80, description: "Chicken with black nuts in rich spicy gravy" },
-          { id: "babi-pongteh", name: "Babi Pongteh", price: 12.50, description: "Braised pork belly in fermented bean sauce" },
-          { id: "laksa-lemak", name: "Laksa Lemak", price: 8.80, description: "Rich coconut curry noodle soup" },
-          { id: "mee-siam", name: "Mee Siam", price: 7.50, description: "Tangy rice vermicelli in tamarind gravy" },
-        ],
-      },
-    ],
-    hours: {
+          { id: 'sample-1', name: 'House Special', price: 12.80, description: 'Chef\'s recommended dish' },
+          { id: 'sample-2', name: 'Daily Fresh', price: 8.50, description: 'Fresh ingredients prepared daily' },
+        ]
+      }]
+    }
+
+    const categories: { [key: string]: any[] } = {}
+    
+    menuItems.forEach(item => {
+      const category = item.category || 'Menu Items'
+      if (!categories[category]) {
+        categories[category] = []
+      }
+      categories[category].push({
+        id: item.id || item.name.toLowerCase().replace(/\s+/g, '-'),
+        name: item.name,
+        price: parseFloat(item.price) || 0,
+        description: item.description || '',
+      })
+    })
+
+    return Object.entries(categories).map(([category, items]) => ({
+      category,
+      items,
+    }))
+  }
+
+  // Transform business hours from database format
+  const transformBusinessHours = (businessHours: any[]) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const defaultHours: { [key: string]: string } = {
       Monday: "9:00 AM - 6:00 PM",
       Tuesday: "9:00 AM - 6:00 PM",
       Wednesday: "9:00 AM - 6:00 PM",
@@ -89,40 +163,62 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
       Friday: "9:00 AM - 6:00 PM",
       Saturday: "8:00 AM - 7:00 PM",
       Sunday: "Closed",
-    },
-    contact: {
-      phone: "+65 9123 4567",
-      email: "ahmaskitchen@gmail.com",
-      instagram: "@ahmas_kitchen_sg",
-      whatsapp: "+65 9123 4567",
-    },
-    coordinates: {
-      lat: 1.3521,
-      lng: 103.8198,
-    },
-    reviews: [
-      {
-        name: "Sarah T.",
-        rating: 5,
-        date: "2 days ago",
-        comment:
-          "Amazing authentic Peranakan food! The kueh lapis was exactly like my grandmother used to make. Mrs. Lim is so passionate about preserving these traditional recipes.",
-      },
-      {
-        name: "David L.",
-        rating: 5,
-        date: "1 week ago",
-        comment:
-          "Best laksa lemak I've had in Singapore! The flavors are so rich and authentic. Definitely ordering again.",
-      },
-      {
-        name: "Michelle C.",
-        rating: 4,
-        date: "2 weeks ago",
-        comment:
-          "Love supporting local home businesses. The ondeh ondeh was perfect - just the right amount of sweetness. Will try more items next time!",
-      },
-    ],
+    }
+
+    if (!businessHours || businessHours.length === 0) {
+      return defaultHours
+    }
+
+    const hours: { [key: string]: string } = {}
+    
+    businessHours.forEach(hour => {
+      const dayName = days[hour.day_of_week]
+      if (hour.is_open) {
+        hours[dayName] = `${hour.open_time} - ${hour.close_time}`
+      } else {
+        hours[dayName] = 'Closed'
+      }
+    })
+
+    // Fill in missing days as closed or use defaults
+    days.forEach(day => {
+      if (!hours[day]) {
+        hours[day] = defaultHours[day] || 'Closed'
+      }
+    })
+
+    return hours
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading cafe details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !cafe) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Coffee className="w-8 h-8 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Cafe Not Found</h1>
+          <p className="text-gray-600 mb-6">{error || 'The cafe you\'re looking for doesn\'t exist or has been removed.'}</p>
+          <Button asChild>
+            <Link href="/browse">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Browse
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   // Interactive functions
@@ -137,11 +233,53 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
     }
 
     try {
-      setIsSaved(!isSaved)
-      toast({
-        title: isSaved ? "Removed from favorites" : "Added to favorites",
-        description: isSaved ? `${cafe.name} removed from your saved cafes` : `${cafe.name} saved to your favorites`,
-      })
+      if (isSaved) {
+        // Remove from favorites
+        const response = await fetch(`/api/favorites?business_id=${cafe.id}`, {
+          method: 'DELETE',
+        })
+        
+        if (response.ok) {
+          setIsSaved(false)
+          toast({
+            title: "Removed from favorites",
+            description: `${cafe.name} removed from your saved cafes`,
+          })
+        } else {
+          throw new Error('Failed to remove from favorites')
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            business_id: cafe.id,
+          }),
+        })
+        
+        if (response.ok) {
+          setIsSaved(true)
+          toast({
+            title: "Added to favorites",
+            description: `${cafe.name} saved to your favorites`,
+          })
+        } else {
+          const data = await response.json()
+          if (response.status === 409) {
+            // Already in favorites
+            setIsSaved(true)
+            toast({
+              title: "Already in favorites",
+              description: `${cafe.name} is already in your favorites`,
+            })
+          } else {
+            throw new Error(data.error || 'Failed to add to favorites')
+          }
+        }
+      }
     } catch (error) {
       console.error("Error saving cafe:", error)
       toast({
@@ -467,7 +605,7 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {cafe.images.slice(1).map((image, index) => (
+                {cafe.images.slice(1).map((image: string, index: number) => (
                   <Image
                     key={index}
                     src={image || "/placeholder.svg"}
@@ -496,7 +634,7 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                     <span>{cafe.priceRange}</span>
                     <span>•</span>
                     <div className="flex flex-wrap gap-1">
-                      {cafe.cuisine.map((type) => (
+                      {cafe.cuisine.map((type: string) => (
                         <Badge key={type} variant="outline" className="text-xs">
                           {type}
                         </Badge>
@@ -546,11 +684,11 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
               <Card>
                 <CardContent className="p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Menu</h2>
-                  {cafe.menu.map((category, categoryIndex) => (
+                  {cafe.menu.map((category: any, categoryIndex: number) => (
                     <div key={categoryIndex} className="mb-8 last:mb-0">
                       <h3 className="text-xl font-semibold text-gray-900 mb-4">{category.category}</h3>
                       <div className="space-y-4">
-                        {category.items.map((item, itemIndex) => (
+                        {category.items.map((item: any, itemIndex: number) => (
                           <div key={itemIndex} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-900">{item.name}</h4>
@@ -586,7 +724,7 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                   </div>
 
                   <div className="space-y-6">
-                    {cafe.reviews.map((review, index) => (
+                    {cafe.reviews.map((review: any, index: number) => (
                       <div key={index} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
@@ -638,7 +776,7 @@ export default function CafeProfilePage({ params }: { params: { id: string } }) 
                     {Object.entries(cafe.hours).map(([day, hours]) => (
                       <div key={day} className="flex justify-between text-sm">
                         <span className="text-gray-600">{day}</span>
-                        <span className={hours === "Closed" ? "text-red-600" : "text-gray-900"}>{hours}</span>
+                        <span className={hours === "Closed" ? "text-red-600" : "text-gray-900"}>{String(hours)}</span>
                       </div>
                     ))}
                   </div>

@@ -30,7 +30,9 @@ export default function BrowsePage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [cafes, setCafes] = useState<any[]>([])
   const [filteredCafes, setFilteredCafes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   
   // Filter states
@@ -46,80 +48,48 @@ export default function BrowsePage() {
     setSearchQuery(query)
   }, [searchParams])
 
-  const cafes = [
-    {
-      id: 1,
-      name: "Ah Ma's Kitchen",
-      cuisine: "Peranakan",
-      location: "Toa Payoh",
-      rating: 4.8,
-      reviews: 124,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Authentic Nyonya Kueh",
-      priceRange: "$$",
-      isOpen: true,
-    },
-    {
-      id: 2,
-      name: "Brew & Bite",
-      cuisine: "Western Fusion",
-      location: "Tampines",
-      rating: 4.6,
-      reviews: 89,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Artisan Coffee & Brunch",
-      priceRange: "$$$",
-      isOpen: true,
-    },
-    {
-      id: 3,
-      name: "Spice Route Home",
-      cuisine: "Indian",
-      location: "Jurong West",
-      rating: 4.9,
-      reviews: 156,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Homestyle Curries",
-      priceRange: "$",
-      isOpen: false,
-    },
-    {
-      id: 4,
-      name: "Noodle Nest",
-      cuisine: "Chinese",
-      location: "Ang Mo Kio",
-      rating: 4.7,
-      reviews: 203,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Hand-pulled Noodles",
-      priceRange: "$$",
-      isOpen: true,
-    },
-    {
-      id: 5,
-      name: "Sweet Treats Corner",
-      cuisine: "Desserts",
-      location: "Orchard",
-      rating: 4.5,
-      reviews: 78,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Handmade Pastries",
-      priceRange: "$$$",
-      isOpen: true,
-    },
-    {
-      id: 6,
-      name: "Healthy Bites",
-      cuisine: "Healthy",
-      location: "Clarke Quay",
-      rating: 4.4,
-      reviews: 92,
-      image: "/placeholder.svg?height=200&width=300",
-      specialty: "Organic Bowls",
-      priceRange: "$$",
-      isOpen: true,
-    },
-  ]
+  // Fetch businesses from API
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      try {
+        const response = await fetch('/api/businesses')
+        const data = await response.json()
+        
+        if (data.success && data.businesses) {
+          // Transform API data to component format
+          const transformedCafes = data.businesses.map((business: any) => ({
+            id: business.id,
+            name: business.business_name,
+            cuisine: business.business_cuisines?.map((bc: any) => bc.cuisine_types?.name).filter(Boolean).join(", ") || "Various",
+            location: business.district,
+            rating: business.reviews?.length > 0 
+              ? +(business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / business.reviews.length).toFixed(1)
+              : 4.5,
+            reviews: business.reviews?.length || 0,
+            image: business.cover_image_url || "/placeholder.svg?height=200&width=300",
+            specialty: business.specialty || "Delicious home-cooked meals",
+            priceRange: business.price_range || "$$",
+            isOpen: business.status === 'active',
+            slug: business.slug,
+            description: business.description,
+          }))
+          setCafes(transformedCafes)
+          setFilteredCafes(transformedCafes)
+        } else {
+          setCafes([])
+          setFilteredCafes([])
+        }
+      } catch (error) {
+        console.error('Failed to fetch businesses:', error)
+        setCafes([])
+        setFilteredCafes([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBusinesses()
+  }, [])
 
   // Filter and search logic
   useEffect(() => {
@@ -139,7 +109,7 @@ export default function BrowsePage() {
     // Cuisine filter
     if (selectedCuisines.length > 0) {
       filtered = filtered.filter(cafe => 
-        selectedCuisines.includes(cafe.cuisine)
+        selectedCuisines.some(cuisine => cafe.cuisine.toLowerCase().includes(cuisine.toLowerCase()))
       )
     }
 
@@ -423,7 +393,22 @@ export default function BrowsePage() {
         </div>
 
         {/* Results */}
-        {filteredCafes.length > 0 ? (
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="overflow-hidden h-full flex flex-col animate-pulse">
+                <div className="bg-gray-200 w-full h-48"></div>
+                <CardContent className="p-4 flex-1 flex flex-col">
+                  <div className="space-y-3">
+                    <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredCafes.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCafes.map((cafe) => (
               <Link key={cafe.id} href={`/cafe/${cafe.id}`}>

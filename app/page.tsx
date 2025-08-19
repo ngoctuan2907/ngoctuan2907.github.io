@@ -35,112 +35,80 @@ import { useAuth } from "@/lib/auth-context";
 import { AdTicker } from "@/components/ui/ad-ticker";
 
 export default function HomePage() {
-  const { user, userProfile, signOut } = useAuth();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user, userProfile, loading: authLoading, signOut } = useAuth()
+  const router = useRouter()
+  const [featuredCafes, setFeaturedCafes] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
   const [dynamicStats, setDynamicStats] = useState({
     cafes: "200+",
     customers: "15K+", 
     orders: "50K+"
-  });
-  const [featuredCafes, setFeaturedCafes] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  })
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  // Fetch dynamic stats and featured cafes on component mount
+  // Fetch dynamic data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch stats
-        const statsRes = await fetch('/api/stats');
-        const statsData = await statsRes.json();
-        setDynamicStats(statsData);
-
-        // Fetch featured businesses
-        const businessRes = await fetch('/api/businesses?limit=4');
-        const businessData = await businessRes.json();
-        
-        if (businessData.success && businessData.businesses) {
-          // Transform API data to match the expected format
-          const transformedCafes = businessData.businesses.map((business: any) => ({
-            id: business.id,
-            name: business.business_name,
-            cuisine: business.business_cuisines?.[0]?.cuisine_types?.name || 'Various',
-            location: business.district,
-            rating: business.reviews?.length > 0 
-              ? (business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / business.reviews.length).toFixed(1)
-              : 4.5,
-            reviews: business.reviews?.length || 0,
-            image: business.cover_image_url || "/placeholder.svg?height=200&width=300",
-            specialty: business.specialty || business.description?.substring(0, 30) + '...' || 'Delicious Food',
-            priceRange: business.price_range || '$$',
-            isOpen: business.status === 'active',
-            slug: business.slug
-          }));
-          setFeaturedCafes(transformedCafes);
+        // Fetch categories
+        const categoriesResponse = await fetch('/api/categories')
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json()
+          if (categoriesData.success) {
+            setCategories(categoriesData.categories.slice(0, 6)) // Top 6 categories
+          }
         }
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
-        // Keep default mock data on error
-        setFeaturedCafes([
-          {
-            id: 1,
-            name: "Ah Ma's Kitchen",
-            cuisine: "Peranakan",
-            location: "Toa Payoh",
-            rating: 4.8,
-            reviews: 124,
-            image: "/placeholder.svg?height=200&width=300",
-            specialty: "Authentic Nyonya Kueh",
-            priceRange: "$$",
-            isOpen: true,
-            slug: "ah-mas-kitchen"
-          },
-          {
-            id: 2,
-            name: "Brew & Bite",
-            cuisine: "Western Fusion",
-            location: "Tampines",
-            rating: 4.6,
-            reviews: 89,
-            image: "/placeholder.svg?height=200&width=300",
-            specialty: "Artisan Coffee & Brunch",
-            priceRange: "$$$",
-            isOpen: true,
-            slug: "brew-and-bite"
-          },
-          {
-            id: 3,
-            name: "Spice Route Home",
-            cuisine: "Indian",
-            location: "Jurong West",
-            rating: 4.9,
-            reviews: 156,
-            image: "/placeholder.svg?height=200&width=300",
-            specialty: "Homestyle Curries",
-            priceRange: "$",
-            isOpen: false,
-            slug: "spice-route-home"
-          },
-          {
-            id: 4,
-            name: "Noodle Nest",
-            cuisine: "Chinese",
-            location: "Ang Mo Kio",
-            rating: 4.7,
-            reviews: 203,
-            image: "/placeholder.svg?height=200&width=300",
-            specialty: "Hand-pulled Noodles",
-            priceRange: "$$",
-            isOpen: true,
-            slug: "noodle-nest"
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchData();
+        // Fetch featured cafes
+        const businessesResponse = await fetch('/api/businesses?featured=1&limit=8', { cache: 'no-store' })
+        if (businessesResponse.ok) {
+          const businessesData = await businessesResponse.json()
+          if (businessesData.success && businessesData.businesses) {
+            // Map the businesses data to the expected format
+            const mappedCafes = businessesData.businesses.map((b: any) => ({
+              id: b.id,
+              name: b.business_name,
+              location: b.district,
+              rating: b.avg_rating ?? 4.5,
+              reviews: b.review_count ?? 0,
+              image: b.cover_image_url ?? '/placeholder.svg?height=200&width=300',
+              slug: b.slug,
+              priceRange: b.price_range ?? '$$',
+              specialty: b.specialty ?? 'Home-cooked meals',
+              cuisine: b.business_cuisines?.[0]?.cuisine_types?.name ?? 'Various',
+              isOpen: b.status === 'active'
+            }))
+            setFeaturedCafes(mappedCafes)
+          } else {
+            setFeaturedCafes([]) // Empty array, not mocks
+          }
+        } else {
+          console.error('Failed to fetch businesses')
+          setFeaturedCafes([]) // Empty array on error
+        }
+
+        // Fetch stats
+        const statsResponse = await fetch('/api/stats')
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json()
+          if (statsData.cafes && statsData.customers && statsData.orders) {
+            setDynamicStats({
+              cafes: statsData.cafes,
+              customers: statsData.customers,
+              orders: statsData.orders
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+        setFeaturedCafes([]) // Empty array on error
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
   // Helper function to get user initials for avatar
@@ -179,14 +147,7 @@ export default function HomePage() {
     }
   }
 
-  const categories = [
-    { name: "Local", icon: "🇸🇬", count: 45 },
-    { name: "Western", icon: "🍔", count: 32 },
-    { name: "Asian Fusion", icon: "🍜", count: 28 },
-    { name: "Desserts", icon: "🧁", count: 19 },
-    { name: "Coffee", icon: "☕", count: 41 },
-    { name: "Healthy", icon: "🥗", count: 23 },
-  ];
+
 
   const stats = [
     { label: "Home Cafes", value: dynamicStats.cafes, icon: Coffee },
@@ -229,6 +190,13 @@ export default function HomePage() {
                 className="text-gray-600 hover:text-orange-600 transition-colors"
               >
                 About
+              </Link>
+              {/* Temporary testing link */}
+              <Link
+                href="/register-business"
+                className="text-gray-600 hover:text-orange-600 transition-colors"
+              >
+                Register Business
               </Link>
 
               {user ? (
@@ -396,7 +364,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isLoading ? (
+            {loading ? (
               // Loading skeleton
               Array.from({ length: 4 }).map((_, index) => (
                 <Card key={index} className="overflow-hidden">
@@ -410,6 +378,11 @@ export default function HomePage() {
                   </CardContent>
                 </Card>
               ))
+            ) : featuredCafes.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground text-lg mb-2">No cafes found</p>
+                <p className="text-muted-foreground">Check back soon for new home-based cafes!</p>
+              </div>
             ) : (
               featuredCafes.map((cafe) => (
                 <Link key={cafe.id} href={`/cafe/${cafe.slug || cafe.id}`}>
