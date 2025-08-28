@@ -6,39 +6,53 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    console.log("📊 [VERCEL LOG] Stats API called at:", new Date().toISOString())
+    console.log("📊 [STATS API] Called at:", new Date().toISOString())
 
     const supabase = createServerClientForApi()
-    let cafesCount = 4 // Default to our mock cafes
-    let customersCount = 1247 // Mock data
-    let ordersCount = 5692 // Mock data
+    
+    // Initialize with zero values - real data only
+    let cafesCount = 0
+    let customersCount = 0
+    let ordersCount = 0
 
     try {
-      // Try to get real data from database
+      // Get real business count
       const { count: businessCount } = await supabase
         .from('businesses')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active')
 
-      if (businessCount !== null && businessCount > 0) {
+      if (businessCount !== null) {
         cafesCount = businessCount
       }
 
-      // TODO: Add real customer and order queries when data is available
-      // const { count: customerCount } = await supabase
-      //   .from('orders')
-      //   .select('user_id', { count: 'exact', head: true })
-      //   .eq('status', 'completed')
-      //   .group('user_id')
+      // Get real customer count (distinct users who have placed orders)
+      const { data: customerData, error: customerError } = await supabase
+        .from('orders')
+        .select('customer_id')
+        .not('customer_id', 'is', null)
+
+      if (!customerError && customerData) {
+        const uniqueCustomers = new Set(customerData.map(o => o.customer_id))
+        customersCount = uniqueCustomers.size
+      }
       
-      // const { count: orderCount } = await supabase
-      //   .from('orders')
-      //   .select('id', { count: 'exact', head: true })
-      //   .eq('status', 'completed')
+      // Get real order count  
+      const { count: orderCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['confirmed', 'completed', 'delivered'])
+
+      if (orderCount !== null) {
+        ordersCount = orderCount
+      }
 
     } catch (dbError) {
-      console.log("📊 [VERCEL LOG] Using fallback data, DB query failed:", dbError)
-      // Keep mock data if DB query fails
+      console.log("📊 [STATS API] DB query failed:", dbError)
+      // Return zeros if DB fails - no fake data
+      cafesCount = 0
+      customersCount = 0
+      ordersCount = 0
     }
 
     // Format numbers with + suffix if over threshold
@@ -57,7 +71,7 @@ export async function GET() {
       orders: formatStat(ordersCount)
     }
 
-    console.log("✅ [VERCEL LOG] Stats computed:", stats)
+    console.log("✅ [STATS API] Stats computed:", stats)
 
     return NextResponse.json(stats, {
       headers: {
@@ -66,13 +80,13 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error("❌ [VERCEL LOG] Stats API error:", error)
+    console.error("❌ [STATS API] Error:", error)
     
-    // Return fallback data on error
+    // Return zero data on error - no fake data
     return NextResponse.json({
-      cafes: "4+",
-      customers: "1K+", 
-      orders: "5K+"
+      cafes: "0",
+      customers: "0", 
+      orders: "0"
     })
   }
 }

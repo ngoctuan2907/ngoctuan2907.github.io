@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClientForApi } from "@/lib/supabase-api"
+import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { requireStakeholderOwner, AuthorizationError } from "@/lib/authz"
 import { z } from "zod"
 import Stripe from "stripe"
 
@@ -10,7 +12,9 @@ function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return new Stripe(process.env.STRIPE_SECRET_KEY)
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-02-24.acacia', // Pin to specific API version
+  })
 }
 
 const checkoutSchema = z.object({
@@ -25,8 +29,11 @@ export async function POST(request: NextRequest) {
     const stripe = getStripe()
     const supabase = createServerClientForApi()
     
-    // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Support both cookie-based and Bearer token authentication
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -34,23 +41,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = checkoutSchema.parse(body)
 
-    // Check if user has permission to create subscription for this stakeholder
-    const { data: membership } = await supabase
-      .from('memberships')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('stakeholder_id', validatedData.stakeholder_id)
-      .eq('role', 'stakeholder_owner')
-      .single()
-
-    if (!membership) {
-      return NextResponse.json({ 
-        error: "Only stakeholder owners can create subscriptions" 
-      }, { status: 403 })
+    // Use centralized authz helper to check stakeholder ownership
+    try {
+      await requireStakeholderOwner(user.id, validatedData.stakeholder_id)
+    } catch (error) {
+      if (error instanceof AuthorizationError) {
+        return NextResponse.json({ error: error.message }, { 
+          status: error.code === 'FORBIDDEN' ? 403 : 404 
+        })
+      }
+      throw error
     }
 
-    // Get stakeholder details
-    const { data: stakeholder, error: stakeholderError } = await supabase
+    // Get stakeholder details using admin client
+    const supabaseAdmin = createSupabaseAdmin()
+    const { data: stakeholder, error: stakeholderError } = await supabaseAdmin
       .from('stakeholders')
       .select('*')
       .eq('id', validatedData.stakeholder_id)
@@ -60,8 +65,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Stakeholder not found" }, { status: 404 })
     }
 
-    // Get plan features for pricing (you'll need to add pricing to plan_features)
-    const { data: planFeatures, error: planError } = await supabase
+    // Get plan features for pricing using admin client  
+    const { data: planFeatures, error: planError } = await supabaseAdmin
       .from('plan_features')
       .select('*')
       .eq('plan', validatedData.plan)
@@ -84,8 +89,8 @@ export async function POST(request: NextRequest) {
       })
       customerId = customer.id
 
-      // Update stakeholder with Stripe customer ID
-      await supabase
+      // Update stakeholder with Stripe customer ID using admin client
+      await supabaseAdmin
         .from('stakeholders')
         .update({ stripe_customer_id: customerId })
         .eq('id', stakeholder.id)

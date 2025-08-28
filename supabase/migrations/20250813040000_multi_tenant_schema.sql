@@ -28,11 +28,26 @@ CREATE TABLE memberships (
   stakeholder_id UUID REFERENCES stakeholders(id) ON DELETE CASCADE,
   shop_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
   role role_name NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  -- Ensure unique combinations for role assignments
-  UNIQUE (user_id, role, COALESCE(stakeholder_id, '00000000-0000-0000-0000-000000000000'), 
-          COALESCE(shop_id, '00000000-0000-0000-0000-000000000000'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Add unique constraints separately to avoid COALESCE syntax issues
+CREATE UNIQUE INDEX idx_memberships_unique_stakeholder 
+ON memberships (user_id, role, stakeholder_id) 
+WHERE stakeholder_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_memberships_unique_shop 
+ON memberships (user_id, role, shop_id) 
+WHERE shop_id IS NOT NULL;
+
+-- Ensure a user can only have one role per stakeholder/shop combination
+CREATE UNIQUE INDEX idx_memberships_unique_user_stakeholder 
+ON memberships (user_id, stakeholder_id) 
+WHERE stakeholder_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_memberships_unique_user_shop 
+ON memberships (user_id, shop_id) 
+WHERE shop_id IS NOT NULL;
 -- Subscriptions table (one per stakeholder, Stripe-driven)
 CREATE TABLE subscriptions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -209,10 +224,10 @@ FOR INSERT WITH CHECK (
     WHERE m.user_id = auth.uid()
       AND m.role IN ('stakeholder_owner', 'staff')
       AND (
-        (NEW.stakeholder_id IS NOT NULL AND m.stakeholder_id = NEW.stakeholder_id)
-        OR (NEW.shop_id IS NOT NULL AND EXISTS(
+        (stakeholder_id IS NOT NULL AND m.stakeholder_id = stakeholder_id)
+        OR (shop_id IS NOT NULL AND EXISTS(
           SELECT 1 FROM businesses b
-          WHERE b.id = NEW.shop_id
+          WHERE b.id = shop_id
             AND b.stakeholder_id = m.stakeholder_id
         ))
       )
@@ -238,11 +253,11 @@ FOR INSERT WITH CHECK (
   is_platform_admin(auth.uid())
   OR EXISTS(
     SELECT 1 FROM memberships m
-    JOIN businesses b ON b.id = NEW.shop_id
+    JOIN businesses b ON b.id = shop_id
     WHERE m.user_id = auth.uid()
       AND (
         (m.role IN ('stakeholder_owner', 'staff') AND m.stakeholder_id = b.stakeholder_id)
-        OR (m.role = 'clerk' AND m.shop_id = NEW.shop_id)
+        OR (m.role = 'clerk' AND m.shop_id = shop_id)
       )
   )
 );
@@ -263,7 +278,7 @@ FOR INSERT WITH CHECK (
   is_platform_admin(auth.uid())
   OR EXISTS(
     SELECT 1 FROM memberships m
-    JOIN businesses b ON b.id = NEW.shop_id
+    JOIN businesses b ON b.id = shop_id
     WHERE m.user_id = auth.uid()
       AND m.role IN ('stakeholder_owner', 'staff')
       AND m.stakeholder_id = b.stakeholder_id

@@ -1,10 +1,30 @@
--- Cleanup old triggers and functions
-DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
-DROP TRIGGER IF EXISTS update_businesses_updated_at ON businesses;
-DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
-DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
-DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
-DROP FUNCTION IF EXISTS update_updated_at_column;
+-- Cleanup old triggers and functions (safe cleanup with table existence check)
+DO $$ 
+BEGIN
+    -- Only drop triggers if tables exist
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_profiles') THEN
+        DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'businesses') THEN
+        DROP TRIGGER IF EXISTS update_businesses_updated_at ON businesses;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'menu_items') THEN
+        DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'reviews') THEN
+        DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'orders') THEN
+        DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
+    END IF;
+    
+    -- Drop function (this is safe even if it doesn't exist)
+    DROP FUNCTION IF EXISTS update_updated_at_column();
+END $$;
 -- Drop all existing tables in reverse dependency order
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;

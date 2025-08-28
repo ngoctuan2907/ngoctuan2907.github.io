@@ -6,7 +6,16 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+
+    "stripe:print-secret": "stripe listen --forward-to localhost:3000/api/stripe/webhook --print-secret",
+    "stripe:listen:bg": "bash -lc 'mkdir -p .stripe && stripe listen --forward-to localhost:3000/api/stripe/webhook >.stripe/listen.log 2>&1 & echo $! > .stripe/listen.pid && echo Listener PID: $(cat .stripe/listen.pid)'",
+    "stripe:stop": "bash -lc 'if [ -f .stripe/listen.pid ]; then kill $(cat .stripe/listen.pid) 2>/dev/null || true; rm -f .stripe/listen.pid; else pkill -f \"stripe listen\" 2>/dev/null || true; fi'",
+
+    "dev:with-webhook": "bash -lc 'export STRIPE_WEBHOOK_SECRET=$(npm run -s stripe:print-secret) && npm run stripe:listen:bg && echo Using STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET && next dev'",
+
+    "trigger:checkout-completed": "stripe trigger checkout.session.completed",
+    "trigger:pi-succeeded": "stripe trigger payment_intent.succeeded"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -38,12 +47,13 @@
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "latest",
+    "@supabase/supabase-js": "^2.52.1",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "latest",
     "date-fns": "4.1.0",
+    "dotenv": "^17.2.1",
     "embla-carousel-react": "latest",
     "fs": "latest",
     "geist": "latest",
@@ -51,6 +61,7 @@
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
     "next-themes": "latest",
+    "node-fetch": "^3.3.2",
     "path": "latest",
     "react": "^18",
     "react-day-picker": "latest",
@@ -60,6 +71,7 @@
     "recharts": "latest",
     "sonner": "latest",
     "stripe": "^17.7.0",
+    "supabase": "^2.39.2",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
