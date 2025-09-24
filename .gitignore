@@ -40,3 +40,5 @@ test-results/
 playwright.config.js
 supabase/.temp/cli-latest
 package-lock.json
+
+playwright-report
