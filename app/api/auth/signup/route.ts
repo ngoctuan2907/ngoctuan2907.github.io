@@ -22,17 +22,17 @@ export async function POST(request: NextRequest) {
     const validatedData = signUpSchema.parse(body)
     console.log("✅ [VERCEL LOG] Data validation successful")
     
-    // Check if email already exists (temporarily disabled to avoid conflicts)
-    // const existingUser = await checkEmailExists(supabase, validatedData.email)
-    // if (existingUser) {
-    //   return NextResponse.json(
-    //     { 
-    //       error: "An account with this email already exists",
-    //       userType: existingUser.user_type 
-    //     }, 
-    //     { status: 409 }
-    //   )
-    // }
+    // Check if email already exists
+    const existingUser = await checkEmailExists(supabase, validatedData.email)
+    if (existingUser) {
+      return NextResponse.json(
+        { 
+          error: "An account with this email already exists",
+          userType: existingUser.user_type 
+        }, 
+        { status: 409 }
+      )
+    }
 
     console.log("🔄 [VERCEL LOG] Calling signUp function...")
     

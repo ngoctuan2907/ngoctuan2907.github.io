@@ -53,6 +53,11 @@ export default function SignUpPage() {
     },
   })
 
+  // Update form when userType changes
+  useEffect(() => {
+    form.setValue("userType", userType as any)
+  }, [userType, form])
+
   // Check email existence
   const checkEmailExists = async (email: string) => {
     try {
@@ -182,7 +187,7 @@ export default function SignUpPage() {
               </Alert>
             )}
 
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form method="post" onSubmit={(e) => e.preventDefault()} className="space-y-4">
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -295,6 +300,12 @@ export default function SignUpPage() {
                     id="intendedBusinessName"
                     {...form.register("intendedBusinessName")}
                     placeholder="Ah Ma's Kitchen"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        form.handleSubmit(onSubmit)()
+                      }
+                    }}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     You can change this later when setting up your business profile
@@ -303,9 +314,10 @@ export default function SignUpPage() {
               )}
 
               <Button 
-                type="submit" 
+                type="button" 
                 className="w-full bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
+                onClick={form.handleSubmit(onSubmit)}
               >
                 {isLoading ? (
                   <>
