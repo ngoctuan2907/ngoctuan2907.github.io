@@ -3,11 +3,16 @@ import { createServerClientForApi } from "@/lib/supabase-api"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    let email = "";
+    try { 
+      email = (await request.json())?.email?.trim() ?? ""; 
+    } catch {
+      // Handle malformed JSON gracefully
+    }
     
     if (!email) {
       return NextResponse.json(
-        { error: "Email is required" },
+        { error: "Missing email" },
         { status: 400 }
       )
     }

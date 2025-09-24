@@ -310,7 +310,8 @@ export default function SignUpPage() {
               )}
 
               <Button 
-                type="submit" 
+                type="button"
+                onClick={form.handleSubmit(onSubmit)}
                 className="w-full bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
               >
