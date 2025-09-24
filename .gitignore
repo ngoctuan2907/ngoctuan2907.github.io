@@ -34,3 +34,6 @@ lookup-codebase
 lookup
 .playwright-mcp
 scripts
+
+tests/
+test-results/
