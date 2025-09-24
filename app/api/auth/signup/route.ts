@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClientForApi } from "@/lib/supabase-api"
+import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { checkEmailExists } from "@/lib/database"
 import { signUpSchema } from "@/lib/auth-schemas"
 
@@ -69,8 +70,43 @@ export async function POST(request: NextRequest) {
       console.error("❌ [VERCEL LOG] Supabase signup error:", {
         message: error.message,
         status: error.status,
-        name: error.name
+        name: error.name,
+        code: error.code
       })
+      
+      // Return proper 400 status codes for Supabase Auth 400 errors
+      if (error.status === 400) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+      
+      // Handle specific auth errors with user-friendly messages
+      if (error.message?.includes('invalid') && error.message?.includes('email')) {
+        return NextResponse.json(
+          { 
+            error: "Please check your email address format. Some email providers may not be supported.",
+            details: error.message 
+          },
+          { status: 400 }
+        )
+      }
+      
+      if (error.message?.includes('already registered')) {
+        return NextResponse.json(
+          { error: "An account with this email already exists. Please sign in instead." },
+          { status: 409 }
+        )
+      }
+
+      if (error.message?.includes('password')) {
+        return NextResponse.json(
+          { 
+            error: "Password does not meet requirements. Please use at least 8 characters with uppercase, lowercase, and numbers.",
+            details: error.message 
+          },
+          { status: 400 }
+        )
+      }
+      
       throw error
     }
 
@@ -81,39 +117,10 @@ export async function POST(request: NextRequest) {
       sessionExists: !!data.session
     })
 
-    // Create user profile server-side after successful signup
-    if (data.user) {
-      console.log("👤 [VERCEL LOG] Creating user profile for user:", data.user.id)
-      
-      const profileData = {
-        user_id: data.user.id,
-        first_name: validatedData.firstName,
-        last_name: validatedData.lastName,
-        user_type: validatedData.userType,
-        phone: validatedData.phone ?? null,
-        intended_business_name: validatedData.intendedBusinessName || null,
-      }
-      
-      console.log("📝 [VERCEL LOG] Profile data to insert:", profileData)
-      
-      const { data: insertedProfile, error: profileError } = await supabase
-        .from("user_profiles")
-        .insert(profileData)
-        .select()
-
-      if (profileError) {
-        console.error("❌ [VERCEL LOG] Error creating user profile:", {
-          message: profileError.message || 'No message',
-          code: profileError.code || 'No code',
-          details: profileError.details || 'No details',
-          hint: profileError.hint || 'No hint',
-          originalError: JSON.stringify(profileError, null, 2)
-        })
-        // Don't throw here - user is created, profile creation can be retried
-      } else {
-        console.log("✅ [VERCEL LOG] User profile created successfully:", insertedProfile)
-      }
-    }
+    // Profile creation is now handled by database trigger (handle_new_user)
+    // No need for manual profile creation since the trigger uses user metadata
+    // This eliminates race conditions and duplicate key violations
+    console.log("👤 [VERCEL LOG] Profile will be created automatically by database trigger")
 
     const result = data
 
@@ -124,6 +131,46 @@ export async function POST(request: NextRequest) {
       needsVerification: !result.user?.email_confirmed_at
     })
 
+    // Give the trigger a moment to create the profile, then verify it was created
+    // This helps catch any trigger failures early
+    if (result.user) {
+      console.log("🔍 [VERCEL LOG] Verifying profile creation by trigger...")
+      
+      // Wait a brief moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      try {
+        // Use admin client to bypass RLS and accurately check if profile was created
+        const admin = createSupabaseAdmin()
+        const { data: profile, error: profileCheckError } = await admin
+          .from("user_profiles")
+          .select("id, user_id, first_name, last_name, user_type")
+          .eq("user_id", result.user.id)
+          .maybeSingle()
+
+        if (profileCheckError || !profile) {
+          console.error("⚠️  [VERCEL LOG] Profile was not created by trigger:", profileCheckError)
+          
+          // Profile creation failed - this is a real issue that needs to be reported
+          return NextResponse.json({
+            error: "Account created but profile setup incomplete. Please contact support or try signing in after email verification.",
+            partialSuccess: true,
+            user: result.user,
+            needsVerification: !result.user.email_confirmed_at
+          }, { status: 202 }) // 202 Accepted indicates partial success
+        } else {
+          console.log("✅ [VERCEL LOG] Profile successfully created by trigger:", {
+            profileId: profile.id,
+            userType: profile.user_type,
+            fullName: `${profile.first_name} ${profile.last_name}`
+          })
+        }
+      } catch (error) {
+        console.error("❌ [VERCEL LOG] Error checking profile creation:", error)
+        // Don't fail the signup for a check error, but log it
+      }
+    }
+
     // Check if user needs email verification
     if (result.user && !result.user.email_confirmed_at) {
       console.log("📧 [VERCEL LOG] Email verification required - sending response")
@@ -131,7 +178,7 @@ export async function POST(request: NextRequest) {
         message: "Account created successfully! Please check your email and click the verification link before signing in.",
         user: result.user,
         needsVerification: true
-      })
+      }, { status: 201 }) // 201 Created for successful account creation
     }
 
     console.log("✅ [VERCEL LOG] Account created and verified - sending success response")
@@ -139,7 +186,7 @@ export async function POST(request: NextRequest) {
       message: "Account created successfully. You can now sign in.",
       user: result.user,
       needsVerification: false
-    })
+    }, { status: 201 }) // 201 Created for successful account creation
   } catch (error: any) {
     // 🟢 Enhanced error logging as requested
     console.error("❌ [VERCEL LOG] Sign up error:", JSON.stringify({

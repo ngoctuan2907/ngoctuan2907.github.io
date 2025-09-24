@@ -78,28 +78,42 @@ export default function SignUpPage() {
   }
 
   const onSubmit = async (data: CustomerSignUpData | BusinessOwnerSignUpData) => {
+    console.log("🚀 [DEBUG] onSubmit called with data:", data)
     setIsLoading(true)
     setEmailError(null)
 
     try {
       // Check if email exists before submitting
+      console.log("🔍 [DEBUG] Checking if email exists...")
       const emailExists = await checkEmailExists(data.email)
+      console.log("📧 [DEBUG] Email exists result:", emailExists)
       if (emailExists) {
+        console.log("❌ [DEBUG] Email exists, stopping submission")
         setIsLoading(false)
         return
       }
 
+      console.log("📤 [DEBUG] Sending signup request...")
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
 
+      console.log("📥 [DEBUG] Signup response received:", response.status)
       const result = await response.json()
+      console.log("📝 [DEBUG] Signup result:", result)
 
       if (!response.ok) {
         if (response.status === 409) {
           setEmailError(result.error)
+        } else if (response.status === 400) {
+          // Handle validation errors
+          toast({
+            title: "Input Error",
+            description: result.error || "Please check your information and try again.",
+            variant: "destructive",
+          })
         } else {
           throw new Error(result.error || "Failed to create account")
         }

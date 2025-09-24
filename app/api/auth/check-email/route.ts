@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createServerClientForApi } from "@/lib/supabase-api"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,11 +12,24 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // For now, we'll return that email doesn't exist to allow signup
-    // In a production app, you might want to implement a more sophisticated check
+    // Use the safe database function to check user existence
+    const supabase = createServerClientForApi()
+    const { data, error } = await supabase.rpc('check_user_exists', {
+      email_to_check: email
+    })
+    
+    if (error) {
+      console.error("Error checking email:", error)
+      // If there's an error, allow signup to proceed
+      return NextResponse.json({ 
+        exists: false,
+        userType: null
+      })
+    }
+    
     return NextResponse.json({ 
-      exists: false,
-      userType: null
+      exists: data?.exists || false,
+      userType: data?.user_type || null
     })
   } catch (error: any) {
     console.error("Check email error:", error)

@@ -188,7 +188,7 @@ export async function getBusinessBySlug(supabase: SupabaseClient, slug: string) 
       ),
       reviews(
         *,
-        users(first_name, last_name)
+        user_profiles!reviews_customer_id_fkey(first_name, last_name)
       ),
       business_images(*)
     `)

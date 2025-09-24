@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
       cuisine,
       search,
       limit,
+    }).catch((e) => {
+      console.error('getBusinesses failed:', JSON.stringify(e, null, 2))
+      throw e
     })
 
     return NextResponse.json({ 
@@ -26,7 +29,7 @@ export async function GET(request: NextRequest) {
       businesses 
     })
   } catch (error) {
-    console.error("Error fetching businesses:", error)
+    console.error("Error fetching businesses:", JSON.stringify(error, null, 2))
     return NextResponse.json({ error: "Failed to fetch businesses" }, { status: 500 })
   }
 }

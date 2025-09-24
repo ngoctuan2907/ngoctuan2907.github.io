@@ -7,13 +7,10 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-
     "stripe:print-secret": "stripe listen --forward-to localhost:3000/api/stripe/webhook --print-secret",
     "stripe:listen:bg": "bash -lc 'mkdir -p .stripe && stripe listen --forward-to localhost:3000/api/stripe/webhook >.stripe/listen.log 2>&1 & echo $! > .stripe/listen.pid && echo Listener PID: $(cat .stripe/listen.pid)'",
     "stripe:stop": "bash -lc 'if [ -f .stripe/listen.pid ]; then kill $(cat .stripe/listen.pid) 2>/dev/null || true; rm -f .stripe/listen.pid; else pkill -f \"stripe listen\" 2>/dev/null || true; fi'",
-
     "dev:with-webhook": "bash -lc 'export STRIPE_WEBHOOK_SECRET=$(npm run -s stripe:print-secret) && npm run stripe:listen:bg && echo Using STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET && next dev'",
-
     "trigger:checkout-completed": "stripe trigger checkout.session.completed",
     "trigger:pi-succeeded": "stripe trigger payment_intent.succeeded"
   },
@@ -63,9 +60,9 @@
     "next-themes": "latest",
     "node-fetch": "^3.3.2",
     "path": "latest",
-    "react": "^18",
+    "react": "18.3.1",
     "react-day-picker": "latest",
-    "react-dom": "^18",
+    "react-dom": "18.3.1",
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",
@@ -78,11 +75,12 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "@types/react": "^18",
+    "@playwright/test": "^1.55.1",
+    "@types/node": "^22.18.6",
+    "@types/react": "^18.3.24",
     "@types/react-dom": "^18",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5.9.2"
   }
 }
