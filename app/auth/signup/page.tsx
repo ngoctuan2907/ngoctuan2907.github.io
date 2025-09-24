@@ -187,7 +187,7 @@ export default function SignUpPage() {
               </Alert>
             )}
 
-            <form method="post" onSubmit={(e) => e.preventDefault()} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -233,9 +233,7 @@ export default function SignUpPage() {
                   }}
                 />
                 {form.formState.errors.email && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.email.message}
-                  </p>
+                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.email.message}</p>
                 )}
               </div>
 
@@ -264,9 +262,7 @@ export default function SignUpPage() {
                   </Button>
                 </div>
                 {form.formState.errors.password && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.password.message}
-                  </p>
+                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.password.message}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
                   Must be 8+ characters with uppercase, lowercase, and number
@@ -314,10 +310,9 @@ export default function SignUpPage() {
               )}
 
               <Button 
-                type="button" 
+                type="submit" 
                 className="w-full bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
-                onClick={form.handleSubmit(onSubmit)}
               >
                 {isLoading ? (
                   <>

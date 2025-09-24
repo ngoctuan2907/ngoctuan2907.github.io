@@ -81,6 +81,13 @@ export async function POST(request: NextRequest) {
         code: error.code
       })
       
+      if (error.code === 'over_email_send_rate_limit' || error.status === 429) {
+        return NextResponse.json(
+          { error: 'Please wait ~60 seconds before requesting another verification email.' },
+          { status: 429 }
+        );
+      }
+      
       // Return proper 400 status codes for Supabase Auth 400 errors
       if (error.status === 400) {
         return NextResponse.json({ error: error.message }, { status: 400 })

@@ -413,29 +413,21 @@ export async function getUserProfile(supabase: SupabaseClient, userId: string) {
   return data
 }
 
-export async function checkEmailExists(supabase: SupabaseClient, email: string): Promise<UserProfile | null> {
-  try {
-    // Use Supabase Admin API to check if user exists by email
-    // For now, we'll check the user_profiles table directly
-    // This requires RLS to be properly configured
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .limit(1)
-      .maybeSingle()
-
-    if (error) {
-      console.error("Error checking email existence:", error)
-      return null
-    }
-    
-    // For production, we should implement a proper email check
-    // For now, return null to allow signup process
-    return null
-  } catch (error) {
-    console.error("Error in checkEmailExists:", error)
-    return null
+export async function checkEmailExists(supabase: SupabaseClient, email: string) {
+  const { data, error } = await supabase.rpc('check_user_exists', {
+    email_to_check: email,
+  });
+  if (error) {
+    console.error('checkEmailExists RPC error:', error);
+    return null; // let signup proceed rather than 500
   }
+  if (data?.exists) {
+    return {
+      user_id: data.user_id ?? null,
+      user_type: (data.user_type as 'customer' | 'business_owner') ?? null,
+    };
+  }
+  return null;
 }
 
 export async function resendEmailConfirmation(supabase: SupabaseClient, email: string) {
