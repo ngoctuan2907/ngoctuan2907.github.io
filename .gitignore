@@ -37,3 +37,5 @@ scripts
 
 tests/
 test-results/
+playwright.config.js
+supabase/.temp/cli-latest
