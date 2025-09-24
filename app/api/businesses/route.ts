@@ -7,6 +7,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[ENV] SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('[ENV] ANON key present:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
     const supabase = createServerClientForApi()
     const { searchParams } = request.nextUrl
     const district = searchParams.get("district") || undefined

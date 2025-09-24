@@ -184,3 +184,12 @@ CREATE TRIGGER update_businesses_updated_at BEFORE UPDATE ON businesses FOR EACH
 CREATE TRIGGER update_menu_items_updated_at BEFORE UPDATE ON menu_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS Policies
+ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can read active featured businesses"
+ON public.businesses
+FOR SELECT
+TO anon, authenticated
+USING (status = 'active');

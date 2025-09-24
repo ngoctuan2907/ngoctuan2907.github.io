@@ -50,6 +50,13 @@ export async function POST(request: NextRequest) {
     
     console.log("📧 [VERCEL LOG] Email redirect URL:", emailRedirectTo)
     
+    try {
+      const health = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { cache: 'no-store' });
+      console.log('[AUTH HEALTH]', health.status);
+    } catch (e) {
+      console.error('[AUTH HEALTH] failed', e);
+    }
+    
     // Create user account with server client - now creating profile server-side
     const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
