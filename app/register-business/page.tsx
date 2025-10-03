@@ -58,6 +58,14 @@ export default function RegisterBusinessPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([])
+  const [showQuickCreate, setShowQuickCreate] = useState(true)
+  const [quickCreateData, setQuickCreateData] = useState({
+    business_name: '',
+    district: '',
+    cuisine_types: [] as string[]
+  })
+  const [isQuickSubmitting, setIsQuickSubmitting] = useState(false)
+  const [availableCategories, setAvailableCategories] = useState<any[]>([])
   const [formData, setFormData] = useState<FormData>({
     business_name: '',
     owner_name: '',
@@ -88,79 +96,26 @@ export default function RegisterBusinessPage() {
   // Handle authentication and profile creation with finite state machine
   useEffect(() => {
     let cancelled = false;
-    let timeoutId: NodeJS.Timeout;
 
     const determineUIState = async () => {
       if (authLoading) return
 
-      // Set timeout guard (8 seconds)
-      timeoutId = setTimeout(() => {
-        if (!cancelled) {
-          setUiState('timeout')
-          setErrorMessage('Loading took too long. Please refresh and try again.')
-        }
-      }, 8000)
-
       try {
         // State 1: Guest (not authenticated)
         if (!user) {
-          clearTimeout(timeoutId)
           if (!cancelled) {
             setUiState('guest')
           }
           return
         }
 
-        // For now, let's simplify: if user is authenticated and has profile, show form
-        // TODO: Add proper subscription check via /api/stripe/subscription
-        
-        // If no profile exists, bootstrap it
-        if (!userProfile) {
-          const bootstrapResponse = await fetch('/api/auth/bootstrap-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          })
-          
-          if (bootstrapResponse.ok) {
-            // Refresh to get new profile
-            window.location.reload()
-            return
-          } else {
-            throw new Error('Failed to bootstrap profile')
-          }
-        }
-
-        // State 2: Check if business owner already has a business
-        if (userProfile?.user_type === 'business_owner') {
-          // Check if already has a business
-          const businessResponse = await fetch('/api/businesses')
-          if (businessResponse.ok) {
-            const businessData = await businessResponse.json()
-            if (businessData.businesses?.length > 0) {
-              toast({
-                title: "Business Already Registered",
-                description: "You already have a business. Redirecting to dashboard.",
-              })
-              router.push('/business-dashboard')
-              return
-            }
-          }
-
-          // State 3: Show form
-          clearTimeout(timeoutId)
-          if (!cancelled) {
-            setUiState('form')
-          }
-        } else {
-          // Regular user - show form directly for now
-          clearTimeout(timeoutId)
-          if (!cancelled) {
-            setUiState('form')
-          }
+        // State 2: User is authenticated - show form immediately
+        // Let the quick create handle bootstrapping profile automatically
+        if (!cancelled) {
+          setUiState('form')
         }
       } catch (error) {
         console.error('Error determining UI state:', error)
-        clearTimeout(timeoutId)
         if (!cancelled) {
           setUiState('error')
           setErrorMessage('Failed to load business registration. Please try again.')
@@ -171,9 +126,24 @@ export default function RegisterBusinessPage() {
     determineUIState()
     return () => { 
       cancelled = true
-      if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [user, userProfile, authLoading, router, toast])
+  }, [user, authLoading])
+
+  // Fetch available categories for quick create
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories')
+        const data = await response.json()
+        if (data.success) {
+          setAvailableCategories(data.categories || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error)
+      }
+    }
+    fetchCategories()
+  }, [])
 
   // Render based on UI state
   if (uiState === 'loading' || authLoading) {
@@ -334,6 +304,69 @@ export default function RegisterBusinessPage() {
     }
   }
 
+  const handleQuickCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!quickCreateData.business_name.trim() || !quickCreateData.district || quickCreateData.cuisine_types.length === 0) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsQuickSubmitting(true)
+    setErrorMessage(null)
+
+    try {
+      // Bootstrap profile first to ensure proper permissions
+      await fetch('/api/auth/bootstrap-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const response = await fetch('/api/businesses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quickCreateData)
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: result.message || "Business created successfully",
+        })
+        router.push(`/cafe/${result.business.slug}`)
+      } else {
+        throw new Error(result.error || 'Failed to create business')
+      }
+    } catch (err: any) {
+      console.error('Quick create error:', err)
+      setErrorMessage(err.message || 'Failed to create business')
+      toast({
+        title: "Creation Failed",
+        description: err.message || "Please try again or contact support",
+        variant: "destructive"
+      })
+    } finally {
+      setIsQuickSubmitting(false)
+    }
+  }
+
+  const toggleQuickCuisine = (cuisine: string) => {
+    const newSelected = quickCreateData.cuisine_types.includes(cuisine)
+      ? quickCreateData.cuisine_types.filter(c => c !== cuisine)
+      : [...quickCreateData.cuisine_types, cuisine]
+    
+    setQuickCreateData(prev => ({
+      ...prev,
+      cuisine_types: newSelected
+    }))
+  }
+
   const handleSubmit = async () => {
     if (!validateStep(4)) return
 
@@ -422,6 +455,146 @@ export default function RegisterBusinessPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
+          {/* Quick Create Option */}
+          {showQuickCreate && (
+            <Card className="mb-8 border-2 border-orange-200 bg-orange-50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-orange-900 mb-2">🚀 Quick Start (Recommended)</h2>
+                    <p className="text-orange-800">Get your cafe listed in just 3 simple steps!</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowQuickCreate(false)}
+                    className="text-orange-600 hover:text-orange-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <form onSubmit={handleQuickCreate} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="quick-name">Cafe Name *</Label>
+                      <Input
+                        id="quick-name"
+                        value={quickCreateData.business_name}
+                        onChange={(e) => setQuickCreateData(prev => ({
+                          ...prev,
+                          business_name: e.target.value
+                        }))}
+                        placeholder="e.g., Ah Ma's Kitchen"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="quick-district">Location (District) *</Label>
+                      <Select 
+                        value={quickCreateData.district} 
+                        onValueChange={(value) => setQuickCreateData(prev => ({
+                          ...prev,
+                          district: value
+                        }))}
+                      >
+                        <SelectTrigger className="mt-1" data-testid="quick-district">
+                          <SelectValue placeholder="Select district" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Central">Central</SelectItem>
+                          <SelectItem value="North">North</SelectItem>
+                          <SelectItem value="South">South</SelectItem>
+                          <SelectItem value="East">East</SelectItem>
+                          <SelectItem value="West">West</SelectItem>
+                          <SelectItem value="Northeast">Northeast</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-semibold">Food Categories *</Label>
+                    <p className="text-sm text-gray-600 mb-3">Select what type of food you serve</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {availableCategories.length > 0 ? availableCategories.map((cat) => (
+                        <div key={cat.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`quick-${cat.id}`}
+                            checked={quickCreateData.cuisine_types.includes(cat.name)}
+                            onCheckedChange={() => toggleQuickCuisine(cat.name)}
+                          />
+                          <Label htmlFor={`quick-${cat.id}`} className="text-sm flex items-center">
+                            <span className="mr-1">{cat.icon}</span>
+                            {cat.name}
+                          </Label>
+                        </div>
+                      )) : cuisineTypes.map((cuisine) => (
+                        <div key={cuisine} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`quick-${cuisine}`}
+                            checked={quickCreateData.cuisine_types.includes(cuisine)}
+                            onCheckedChange={() => toggleQuickCuisine(cuisine)}
+                          />
+                          <Label htmlFor={`quick-${cuisine}`} className="text-sm">
+                            {cuisine}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    {quickCreateData.cuisine_types.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {quickCreateData.cuisine_types.map((cuisine) => (
+                          <Badge key={cuisine} variant="secondary" className="bg-orange-100 text-orange-800">
+                            {cuisine}
+                            <X 
+                              className="w-3 h-3 ml-1 cursor-pointer" 
+                              onClick={() => toggleQuickCuisine(cuisine)} 
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-orange-200">
+                    <div className="text-sm text-orange-700">
+                      💡 You can add more details (menu, photos, hours) later from your dashboard
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isQuickSubmitting}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {isQuickSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create My Cafe Now!'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Divider */}
+          {showQuickCreate && (
+            <div className="mb-8 text-center">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-gray-50 text-gray-500">Or use the detailed form below</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Progress Steps */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
