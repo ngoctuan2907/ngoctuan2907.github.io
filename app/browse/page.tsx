@@ -411,7 +411,7 @@ export default function BrowsePage() {
         ) : filteredCafes.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCafes.map((cafe) => (
-              <Link key={cafe.id} href={`/cafe/${cafe.id}`}>
+              <Link key={cafe.id} href={`/cafe/${cafe.slug}`}>
                 <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden h-full flex flex-col">
                   <div className="relative">
                     <Image
