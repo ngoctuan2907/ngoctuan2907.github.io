@@ -7,29 +7,51 @@ export async function GET(
 ) {
   try {
     const supabase = createServerClientComponent()
+    const identifier = params.id
     
-    const { data: business, error } = await supabase
-      .from('businesses')
-      .select(`
-        *,
-        business_cuisines(cuisine_types(*)),
-        reviews(*),
-        menu_items(*),
-        business_hours(*)
-      `)
-      .eq('id', params.id)
-      .eq('status', 'active')
-      .single()
-
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json(
-        { success: false, error: 'Business not found' },
-        { status: 404 }
-      )
+    // First try to find by ID (if it's numeric)
+    let business = null
+    let error = null
+    
+    const isNumericId = /^\d+$/.test(identifier)
+    
+    if (isNumericId) {
+      const result = await supabase
+        .from('businesses')
+        .select(`
+          *,
+          business_cuisines(cuisine_types(*)),
+          reviews(*),
+          menu_items(*),
+          business_hours(*)
+        `)
+        .eq('id', identifier)
+        .single()
+      
+      business = result.data
+      error = result.error
+    }
+    
+    // If not found by ID or identifier is not numeric, try by slug
+    if (!business) {
+      const result = await supabase
+        .from('businesses')
+        .select(`
+          *,
+          business_cuisines(cuisine_types(*)),
+          reviews(*),
+          menu_items(*),
+          business_hours(*)
+        `)
+        .eq('slug', identifier)
+        .single()
+      
+      business = result.data
+      error = result.error
     }
 
-    if (!business) {
+    if (error || !business) {
+      console.error('Database error:', error)
       return NextResponse.json(
         { success: false, error: 'Business not found' },
         { status: 404 }
