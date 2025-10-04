@@ -51,8 +51,13 @@ export async function POST(request: NextRequest) {
     console.log("📧 [VERCEL LOG] Email redirect URL:", emailRedirectTo)
     
     try {
-      const health = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { cache: 'no-store' });
-      console.log('[AUTH HEALTH]', health.status);
+      const health = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { 
+        cache: 'no-store',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        }
+      });
+      console.log('[AUTH HEALTH]', health.status, await health.text().catch(() => 'no body'));
     } catch (e) {
       console.error('[AUTH HEALTH] failed', e);
     }
@@ -71,6 +76,25 @@ export async function POST(request: NextRequest) {
           intended_business_name: validatedData.intendedBusinessName,
         }
       }
+    })
+    
+    // Log full response for debugging
+    console.log("🔍 [VERCEL LOG] Full Supabase response:", {
+      hasData: !!data,
+      hasUser: !!data?.user,
+      hasSession: !!data?.session,
+      hasError: !!error,
+      userData: data?.user ? {
+        id: data.user.id,
+        email: data.user.email,
+        confirmed: data.user.email_confirmed_at,
+        created: data.user.created_at
+      } : null,
+      errorData: error ? {
+        message: error.message,
+        status: error.status,
+        code: error.code
+      } : null
     })
 
     if (error) {
